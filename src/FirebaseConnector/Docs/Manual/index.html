@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Developer & Operations Manuals — Firebase Push Connector</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+  <!-- Navigation Sidebar -->
+  <nav id="sidebar">
+    <a href="../index.html" class="brand-title">
+      <span>🚀 Firebase Connector</span>
+      <span class="brand-badge">.NET 8</span>
+    </a>
+
+    <div class="nav-section">
+      <div class="nav-header">Documentation Hub</div>
+      <a class="nav-link" href="../index.html">← Back to Overview</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Step-by-Step Manuals</div>
+      <a class="nav-link active" href="index.html">Manuals Portal</a>
+      <a class="nav-link" href="step-by-step-setup-guide.html">1. Setup & Verification</a>
+      <a class="nav-link" href="mobile-apps-integration-guide.html">2. Mobile Apps & Multi-Project</a>
+      <a class="nav-link" href="event-driven-mobile-architecture.html">3. Real-Time Event System</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Architecture Decision Records</div>
+      <a class="nav-link" href="../ADR/index.html">ADR Master Index (001–006)</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">System Specifications</div>
+      <a class="nav-link" href="../architecture.html">System Architecture</a>
+      <a class="nav-link" href="../presence-lifecycle.html">Presence & Heartbeat</a>
+      <a class="nav-link" href="../ios-integration.html">Apple iOS & APNs (.p8)</a>
+      <a class="nav-link" href="../notification-types.html">Notification Types & Payloads</a>
+      <a class="nav-link" href="../mobile-clients.html">Mobile Client SDKs</a>
+      <a class="nav-link" href="../deployment.html">Podman & Docker Deployment</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main id="content">
+    <header class="doc-header">
+      <h1>📖 Comprehensive Engineering Manuals</h1>
+      <p class="lead">Step-by-step operational guides, mobile SDK implementation cookbooks, and event-driven mobile architecture specifications.</p>
+    </header>
+
+    <div class="callout callout-info">
+      <div class="callout-title">Modular Manuals Library</div>
+      <p>These manuals provide in-depth, button-by-button instructions and architectural blueprints for frontend mobile engineers, backend architects, and DevOps engineers.</p>
+    </div>
+
+    <h2>📚 Available Manuals</h2>
+
+    <div class="card-grid">
+
+      <a href="step-by-step-setup-guide.html" class="card">
+        <span class="badge badge-primary">Manual 01</span>
+        <h3 style="margin: 12px 0 8px;">🛠️ Step-by-Step Setup & Verification Guide</h3>
+        <p>Button-by-button walkthrough: creating a Firebase project, downloading the Service Account key, running Podman/Docker, using the Web Simulator, and verifying delivery.</p>
+        <span class="badge badge-success">Read Setup Manual →</span>
+      </a>
+
+      <a href="mobile-apps-integration-guide.html" class="card">
+        <span class="badge badge-primary">Manual 02</span>
+        <h3 style="margin: 12px 0 8px;">📱 Mobile Apps & Multi-Project Integration Manual</h3>
+        <p>Deep-dive into connecting existing iOS, Android, Flutter, and React Native apps, configuring Apple Developer APNs (.p8) keys, and routing multi-tenant Firebase projects.</p>
+        <span class="badge badge-success">Read Mobile Manual →</span>
+      </a>
+
+      <a href="event-driven-mobile-architecture.html" class="card">
+        <span class="badge badge-primary">Manual 03</span>
+        <h3 style="margin: 12px 0 8px;">⚡ Real-Time Event-Driven Mobile Architecture</h3>
+        <p>How mobile apps trigger and receive real-time notifications in an event-driven system (REST Ingress, Event Bus/Kafka, FCM Wakeup, and native Foreground Event Emitters).</p>
+        <span class="badge badge-success">Read Event Architecture →</span>
+      </a>
+
+    </div>
+
+    <h2 style="margin-top: 48px;">🏛️ Architecture Decision Records (ADR)</h2>
+    <p>For formal records of engineering decisions, see the <a href="../ADR/index.html" style="color: var(--primary); font-weight: 600;">Architecture Decision Records (ADR) Portal</a>.</p>
+
+  </main>
+</body>
+</html>

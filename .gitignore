@@ -1,0 +1,57 @@
+# ====================================================================
+# Security & Secrets (NEVER COMMIT SENSITIVE CREDENTIALS)
+# ====================================================================
+
+# Environment variable files containing real keys
+.env
+.env.*
+!.env.example
+
+# Secrets folder contents (keep README.md for instructions)
+secrets/*
+!secrets/README.md
+
+# Firebase & Cloud Service Account private keys
+*adminsdk*.json
+*service-account*.json
+*firebase-key*.json
+*firebase_key*.json
+*.json.secret
+google-services.json
+GoogleService-Info.plist
+*.p8
+*.p12
+*.pem
+*.key
+
+# ====================================================================
+# .NET Build Artifacts & Temporary Files
+# ====================================================================
+[Bb]in/
+[Oo]bj/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.pidb
+*.booproj
+*.svclog
+
+# Visual Studio / Rider / VS Code cache
+.vs/
+.idea/
+*.DotSettings.user
+_ReSharper*/
+
+# Publish outputs
+publish/
+[Aa]pp/[Pp]ublish/
+
+# ====================================================================
+# Operating System & Container Logs
+# ====================================================================
+*.log
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store

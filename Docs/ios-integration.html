@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apple iOS & APNs Integration — Firebase Push Connector</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Navigation Sidebar -->
+  <nav id="sidebar">
+    <a href="index.html" class="brand-title">
+      <span>🚀 Firebase Connector</span>
+      <span class="brand-badge">.NET 8</span>
+    </a>
+
+    <div class="nav-section">
+      <div class="nav-header">Documentation Hub</div>
+      <a class="nav-link" href="index.html">← Back to Overview</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Architecture Decision Records</div>
+      <a class="nav-link" href="ADR/index.html">ADR Index & Logs</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Technical Manuals</div>
+      <a class="nav-link" href="architecture.html">System Architecture</a>
+      <a class="nav-link" href="presence-lifecycle.html">Presence & Heartbeat</a>
+      <a class="nav-link active" href="ios-integration.html">Apple iOS & APNs (.p8)</a>
+      <a class="nav-link" href="notification-types.html">Notification Types & Payloads</a>
+      <a class="nav-link" href="mobile-clients.html">Mobile Client SDKs</a>
+      <a class="nav-link" href="deployment.html">Podman & Docker Deployment</a>
+    </div>
+  </nav>
+
+  <main id="content">
+    <header class="doc-header">
+      <h1>🍎 Apple iOS & APNs Integration Guide</h1>
+      <p class="lead">Everything you need to know about delivering push notifications to iPhones, iPads, and iOS Safari using Firebase Cloud Messaging.</p>
+    </header>
+
+    <div class="callout callout-success">
+      <div class="callout-title">The Fundamental Rule: Zero Backend Changes Needed</div>
+      <p>Our .NET Firebase Connector handles both Android and iOS devices transparently. You <strong>never write APNs code</strong> in the backend. Google FCM acts as the official bridge to Apple APNs servers.</p>
+    </div>
+
+    <h2>1. The Master APNs Key (.p8): What is it & Is it different per device?</h2>
+    <p><strong>NO, it is NOT different for each device!</strong></p>
+    <p>The APNs Key is <strong>ONE single master credential</strong> for your entire Apple Developer Account:</p>
+    <ul>
+      <li>Think of it as your company's <strong>Master Passkey</strong>. It tells Apple that Google Firebase has your official permission to deliver notifications to any of your iOS apps.</li>
+      <li>You generate it <strong>ONCE</strong> in the Apple Developer Portal and upload it <strong>ONCE</strong> to Firebase Console.</li>
+      <li>You <strong>never</strong> install or put the <code>.p8</code> key on user devices or inside mobile app code.</li>
+    </ul>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Concept</th>
+          <th>What is it?</th>
+          <th>How many exist?</th>
+          <th>Where does it go?</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Apple APNs Key (<code>.p8</code>)</strong></td>
+          <td>Company master authorization signature.</td>
+          <td><strong>Exactly 1</strong> for your whole company / team.</td>
+          <td>Uploaded <strong>once</strong> into <strong>Firebase Console</strong>.</td>
+        </tr>
+        <tr>
+          <td><strong>Device Token (FCM Token)</strong></td>
+          <td>The unique digital address of one specific phone.</td>
+          <td><strong>Unique for every device</strong> (Alex's phone has one, Bob's has another).</td>
+          <td>Sent by the mobile app to our backend (<code>POST /api/devices/register</code>).</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>2. Step-by-Step Apple Developer Portal Walkthrough</h2>
+
+    <h3>Step 2.1: Generate an APNs Authentication Key (.p8)</h3>
+    <ol>
+      <li>Log in to <a href="https://developer.apple.com/account" target="_blank" style="color: var(--primary);">developer.apple.com/account</a>.</li>
+      <li>Go to <strong>Certificates, Identifiers & Profiles</strong> > <strong>Keys</strong>.</li>
+      <li>Click the <strong>`+`</strong> button to create a new key.</li>
+      <li>Name the key (e.g., <code>FCM APNs Key</code>).</li>
+      <li>Check the box for <strong>Apple Push Notifications service (APNs)</strong>.</li>
+      <li>Click <strong>Continue</strong> > <strong>Register</strong>.</li>
+      <li>Download the key file (named <code>AuthKey_XXXXXXXXXX.p8</code>). Save it securely; Apple allows only 1 download!</li>
+      <li>Note down your:
+        <ul>
+          <li><strong>Key ID:</strong> 10-character string shown next to the key.</li>
+          <li><strong>Team ID:</strong> 10-character string in the top-right corner of your Apple Developer account.</li>
+        </ul>
+      </li>
+    </ol>
+
+    <h3>Step 2.2: Upload the `.p8` Key to Firebase Console</h3>
+    <ol>
+      <li>Open <a href="https://console.firebase.google.com" target="_blank" style="color: var(--primary);">Firebase Console</a> and select your project.</li>
+      <li>Click the <strong>Gear icon (⚙️)</strong> > <strong>Project settings</strong>.</li>
+      <li>Switch to the <strong>Cloud Messaging</strong> tab.</li>
+      <li>Scroll down to <strong>Apple app configuration</strong>.</li>
+      <li>Under <strong>APNs Authentication Key</strong>, click <strong>Upload</strong>.</li>
+      <li>Select your <code>.p8</code> file, paste your <strong>Key ID</strong> and <strong>Team ID</strong>, and click <strong>Upload</strong>.</li>
+    </ol>
+
+    <h2>3. Xcode Capabilities (Required for iOS App)</h2>
+    <p>In your iOS project in Xcode:</p>
+    <ol>
+      <li>Select your target > <strong>Signing & Capabilities</strong>.</li>
+      <li>Click <strong>`+ Capability`</strong> and add <strong>Push Notifications</strong>.</li>
+      <li>Click <strong>`+ Capability`</strong> again and add <strong>Background Modes</strong>:
+        <ul>
+          <li>Check <strong>Remote notifications</strong> (Required for Silent Push background execution!).</li>
+          <li>Check <strong>Background fetch</strong>.</li>
+        </ul>
+      </li>
+    </ol>
+
+    <h2>4. How to Test iOS Push Without a Mac or App Store (Workaround)</h2>
+    <p>Since iOS 16.4, Apple Safari supports <strong>native Web Push Notifications</strong>:</p>
+    <ol>
+      <li>Expose port 5000 over HTTPS using <code>ngrok http 5000</code> or Cloudflare Tunnel.</li>
+      <li>Open Safari on an iPhone and navigate to <code>https://xxxx.ngrok-free.app/simulator/index.html</code>.</li>
+      <li>Tap <strong>Share > Add to Home Screen</strong> (required by iOS).</li>
+      <li>Launch from Home Screen, tap <strong>Login</strong>, and allow the native iOS push prompt.</li>
+      <li>Send a notification from our API — your iPhone lock screen will light up with an authentic Apple notification!</li>
+    </ol>
+  </main>
+</body>
+</html>

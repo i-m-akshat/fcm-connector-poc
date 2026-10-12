@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobile Apps & Multi-Project Integration Manual — Firebase Push Connector</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+  <!-- Navigation Sidebar -->
+  <nav id="sidebar">
+    <a href="../index.html" class="brand-title">
+      <span>🚀 Firebase Connector</span>
+      <span class="brand-badge">.NET 8</span>
+    </a>
+
+    <div class="nav-section">
+      <div class="nav-header">Documentation Hub</div>
+      <a class="nav-link" href="../index.html">← Back to Overview</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Step-by-Step Manuals</div>
+      <a class="nav-link" href="index.html">← Manuals Portal</a>
+      <a class="nav-link" href="step-by-step-setup-guide.html">1. Setup & Verification</a>
+      <a class="nav-link active" href="mobile-apps-integration-guide.html">2. Mobile Apps & Multi-Project</a>
+      <a class="nav-link" href="event-driven-mobile-architecture.html">3. Real-Time Event System</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Architecture Decision Records</div>
+      <a class="nav-link" href="../ADR/index.html">ADR Master Index (001–006)</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">System Specifications</div>
+      <a class="nav-link" href="../architecture.html">System Architecture</a>
+      <a class="nav-link" href="../presence-lifecycle.html">Presence & Heartbeat</a>
+      <a class="nav-link" href="../ios-integration.html">Apple iOS & APNs (.p8)</a>
+      <a class="nav-link" href="../notification-types.html">Notification Types & Payloads</a>
+      <a class="nav-link" href="../mobile-clients.html">Mobile Client SDKs</a>
+      <a class="nav-link" href="../deployment.html">Podman & Docker Deployment</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main id="content">
+    <header class="doc-header">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+        <span class="badge badge-primary">Manual 02</span>
+        <span class="badge badge-success">Production Ready</span>
+      </div>
+      <h1>📱 Mobile Apps & Multi-Project Integration Manual</h1>
+      <p class="lead">Complete integration manual for native iOS (Swift), native Android (Kotlin), Flutter, and React Native apps connecting to multi-tenant Firebase projects.</p>
+    </header>
+
+    <div class="callout callout-info">
+      <div class="callout-title">The #1 Question: Do I need a separate backend for iOS?</div>
+      <p><strong>NO!</strong> The .NET Firebase Connector handles both Android and iOS devices using the exact same API endpoint (<code>POST /api/notifications/send</code>). Google FCM automatically translates your message into Apple's native HTTP/2 APNs format behind the scenes.</p>
+    </div>
+
+    <!-- SECTION 1: HOW IOS WORKS WITH FCM -->
+    <h2>1. How iOS Works with FCM (Under the Hood)</h2>
+    <p>Many engineers wonder whether FCM replaces Apple APNs. The answer is no: FCM acts as an enterprise gateway and translation bridge:</p>
+
+    <div style="background: #020617; border: 1px solid var(--surface-border); border-radius: 12px; padding: 24px; margin: 24px 0;">
+      <svg viewBox="0 0 840 260" width="100%" height="260" xmlns="http://www.w3.org/2000/svg">
+        <rect width="840" height="260" rx="10" fill="#020617"/>
+
+        <!-- Backend -->
+        <rect x="30" y="80" width="180" height="90" rx="8" fill="#1e293b" stroke="#0284c7" stroke-width="2"/>
+        <text x="120" y="115" fill="#38bdf8" font-size="12" font-weight="700" text-anchor="middle">.NET 8 Connector</text>
+        <text x="120" y="135" fill="#cbd5e1" font-size="10" text-anchor="middle">HTTP v1 Payload</text>
+        <text x="120" y="150" fill="#94a3b8" font-size="9" text-anchor="middle">POST /api/notifications/send</text>
+
+        <!-- Arrow -->
+        <line x1="210" y1="125" x2="280" y2="125" stroke="#38bdf8" stroke-width="2"/>
+        <polygon points="280,121 290,125 280,129" fill="#38bdf8"/>
+
+        <!-- Google FCM -->
+        <rect x="290" y="60" width="220" height="130" rx="8" fill="#0f172a" stroke="#f59e0b" stroke-width="2"/>
+        <text x="400" y="95" fill="#f59e0b" font-size="13" font-weight="700" text-anchor="middle">Google FCM Gateway</text>
+        <text x="400" y="115" fill="#cbd5e1" font-size="10" text-anchor="middle">Inspects Token Header</text>
+        <text x="400" y="135" fill="#fef3c7" font-size="9" text-anchor="middle">Translates to Apple APNs HTTP/2</text>
+        <text x="400" y="155" fill="#22c55e" font-size="9" font-weight="600" text-anchor="middle">Uses Uploaded .p8 Master Key</text>
+
+        <!-- Arrows to Deliverers -->
+        <line x1="510" y1="100" x2="590" y2="70" stroke="#10b981" stroke-width="2"/>
+        <line x1="510" y1="150" x2="590" y2="180" stroke="#94a3b8" stroke-width="2"/>
+
+        <!-- Android Target -->
+        <rect x="590" y="40" width="220" height="60" rx="6" fill="#1e293b" stroke="#10b981"/>
+        <text x="700" y="65" fill="#10b981" font-size="11" font-weight="700" text-anchor="middle">Android Device</text>
+        <text x="700" y="85" fill="#94a3b8" font-size="9" text-anchor="middle">Google Play Services Delivery</text>
+
+        <!-- Apple Target -->
+        <rect x="590" y="150" width="220" height="70" rx="6" fill="#1e293b" stroke="#cbd5e1"/>
+        <text x="700" y="175" fill="#f8fafc" font-size="11" font-weight="700" text-anchor="middle">Apple iPhone / iPad</text>
+        <text x="700" y="195" fill="#94a3b8" font-size="9" text-anchor="middle">Apple APNs HTTP/2 Delivery</text>
+      </svg>
+    </div>
+
+    <!-- SECTION 2: APPLE DEVELOPER SETUP -->
+    <h2>2. Apple Developer & Firebase Setup (The .p8 Master Key)</h2>
+    
+    <div class="callout callout-warning">
+      <div class="callout-title">Key Principle: Is the APNs Key different for each device?</div>
+      <p><strong>NO!</strong> The APNs Key (<code>AuthKey_XXXXX.p8</code>) is <strong>ONE single master passkey</strong> for your entire company / Apple Developer Account. You generate it once in Apple Developer Portal and upload it once to Firebase Console. It never expires, and it never touches user devices.</p>
+    </div>
+
+    <h3>Step-by-Step Apple Configuration:</h3>
+    <ol>
+      <li>Log in to <a href="https://developer.apple.com/account" target="_blank" style="color: var(--primary);">developer.apple.com/account</a>.</li>
+      <li>Go to <strong>Certificates, Identifiers & Profiles</strong> > <strong>Keys</strong>.</li>
+      <li>Click the <strong>`+`</strong> button, name the key <code>FCM APNs Key</code>, and check <strong>Apple Push Notifications service (APNs)</strong>.</li>
+      <li>Click <strong>Register</strong> and download the <code>AuthKey_XXXXXXXXXX.p8</code> file. Save it safely (Apple only lets you download it once!).</li>
+      <li>Copy your 10-character <strong>Key ID</strong> and 10-character <strong>Team ID</strong>.</li>
+      <li>Open <a href="https://console.firebase.google.com" target="_blank" style="color: var(--primary);">Firebase Console</a> > Project Settings > <strong>Cloud Messaging</strong> tab.</li>
+      <li>Under <strong>Apple app configuration</strong>, click <strong>Upload</strong> under APNs Authentication Key and upload your <code>.p8</code> file with Key ID and Team ID.</li>
+    </ol>
+
+    <hr style="border: 0; border-top: 1px solid var(--surface-border); margin: 40px 0;">
+
+    <!-- SECTION 3: MULTI-PROJECT SETUP -->
+    <h2>3. Connecting Existing Apps with Separate Firebase Projects</h2>
+    <p>If your organization has multiple existing mobile apps, each with their own separate Firebase project (e.g. Customer App in Project A, Driver App in Project B):</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>.env — Multi-Project Configuration</span><span>Bash</span></div>
+      <pre><code># App 1: Existing Customer App Project
+FIREBASE_APP_CUSTOMERAPP_JSON='{"type":"service_account","project_id":"my-customer-firebase",...}'
+
+# App 2: Existing Driver App Project
+FIREBASE_APP_DRIVERAPP_JSON='{"type":"service_account","project_id":"my-driver-firebase",...}'
+
+# App 3: Existing Merchant App Project (Base64 string supported!)
+FIREBASE_APP_MERCHANTAPP_JSON=eyJ0eXBlIjoic2VydmljZV9hY2NvdW50IiwicHJvamVjdF9pZCI6...</code></pre>
+    </div>
+
+    <p>When client apps register their tokens via <code>POST /api/devices/register</code>, they include their <code>appId</code> (e.g. <code>"appId": "DriverApp"</code>). The connector automatically routes dispatches to that application's dedicated Firebase project!</p>
+
+    <hr style="border: 0; border-top: 1px solid var(--surface-border); margin: 40px 0;">
+
+    <!-- SECTION 4: CODE SNIPPETS -->
+    <h2>4. Client Implementation Recipes</h2>
+
+    <h3>A. Swift (Native iOS):</h3>
+    <div class="code-block">
+      <div class="code-header"><span>AppDelegate.swift</span><span>Swift</span></div>
+      <pre><code>import UIKit
+import FirebaseCore
+import FirebaseMessaging
+import UserNotifications
+
+@main
+class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate, MessagingDelegate {
+
+    var currentToken: String?
+    let userId = "driver_alex@company.com"
+    let appId = "DriverApp"
+    let apiBase = "https://your-api.com/api"
+
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        FirebaseApp.configure()
+        Messaging.messaging().delegate = self
+
+        // 1. Request Push Permissions
+        UNUserNotificationCenter.current().delegate = self
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, _ in
+            if granted { DispatchQueue.main.async { application.registerForRemoteNotifications() } }
+        }
+        return true
+    }
+
+    // 2. Receive FCM Token and register with backend
+    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+        guard let token = fcmToken else { return }
+        self.currentToken = token
+        registerDeviceWithBackend(token: token)
+    }
+
+    func registerDeviceWithBackend(token: String) {
+        guard let url = URL(string: "\(apiBase)/devices/register") else { return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let payload: [String: Any] = ["userId": userId, "appId": appId, "deviceToken": token, "deviceType": "iOS"]
+        req.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+        URLSession.shared.dataTask(with: req) { _, res, _ in
+            if let http = res as? HTTPURLResponse, http.statusCode == 200 {
+                self.startHeartbeat()
+            }
+        }.resume()
+    }
+
+    // 3. 45-Second Sliding Heartbeat Loop
+    func startHeartbeat() {
+        Timer.scheduledTimer(withTimeInterval: 45.0, repeats: true) { [weak self] _ in
+            guard let self = self, let token = self.currentToken,
+                  let url = URL(string: "\(self.apiBase)/presence/heartbeat") else { return }
+            var req = URLRequest(url: url)
+            req.httpMethod = "POST"
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.httpBody = try? JSONSerialization.data(withJSONObject: ["userId": self.userId, "deviceId": token])
+            URLSession.shared.dataTask(with: req).resume()
+        }
+    }
+}</code></pre>
+    </div>
+
+    <h3>B. Flutter (Cross-Platform Dart):</h3>
+    <div class="code-block">
+      <div class="code-header"><span>main.dart</span><span>Dart</span></div>
+      <pre><code>import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:http/http.dart' as http;
+
+Future&lt;void&gt; initPushClient() async {
+  await Firebase.initializeApp();
+  NotificationSettings settings = await FirebaseMessaging.instance.requestPermission();
+
+  if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+    String? token = await FirebaseMessaging.instance.getToken();
+    if (token != null) {
+      // 1. Register with backend
+      await http.post(
+        Uri.parse("https://your-api.com/api/devices/register"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "userId": "alex@company.com",
+          "appId": "CustomerApp",
+          "deviceToken": token,
+          "deviceType": "FlutterMobile"
+        }),
+      );
+
+      // 2. 45-second presence heartbeat
+      Timer.periodic(const Duration(seconds: 45), (timer) async {
+        await http.post(
+          Uri.parse("https://your-api.com/api/presence/heartbeat"),
+          headers: {"Content-Type": "application/json"},
+          body: jsonEncode({"userId": "alex@company.com", "deviceId": token}),
+        );
+      });
+    }
+  }
+}</code></pre>
+    </div>
+
+  </main>
+</body>
+</html>

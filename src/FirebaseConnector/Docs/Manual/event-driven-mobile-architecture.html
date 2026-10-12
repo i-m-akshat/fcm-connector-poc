@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Event-Driven Mobile Architecture — Firebase Push Connector</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+  <!-- Navigation Sidebar -->
+  <nav id="sidebar">
+    <a href="../index.html" class="brand-title">
+      <span>🚀 Firebase Connector</span>
+      <span class="brand-badge">.NET 8</span>
+    </a>
+
+    <div class="nav-section">
+      <div class="nav-header">Documentation Hub</div>
+      <a class="nav-link" href="../index.html">← Back to Overview</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Step-by-Step Manuals</div>
+      <a class="nav-link" href="index.html">← Manuals Portal</a>
+      <a class="nav-link" href="step-by-step-setup-guide.html">1. Setup & Verification</a>
+      <a class="nav-link" href="mobile-apps-integration-guide.html">2. Mobile Apps & Multi-Project</a>
+      <a class="nav-link active" href="event-driven-mobile-architecture.html">3. Real-Time Event System</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Architecture Decision Records</div>
+      <a class="nav-link" href="../ADR/index.html">ADR Master Index (001–006)</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">System Specifications</div>
+      <a class="nav-link" href="../architecture.html">System Architecture</a>
+      <a class="nav-link" href="../presence-lifecycle.html">Presence & Heartbeat</a>
+      <a class="nav-link" href="../ios-integration.html">Apple iOS & APNs (.p8)</a>
+      <a class="nav-link" href="../notification-types.html">Notification Types & Payloads</a>
+      <a class="nav-link" href="../mobile-clients.html">Mobile Client SDKs</a>
+      <a class="nav-link" href="../deployment.html">Podman & Docker Deployment</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main id="content">
+    <header class="doc-header">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+        <span class="badge badge-primary">Manual 03</span>
+        <span class="badge badge-success">Architecture Blueprint</span>
+      </div>
+      <h1>⚡ Real-Time Event-Driven Mobile Architecture</h1>
+      <p class="lead">How mobile apps trigger and receive real-time notifications in an enterprise event-driven system: REST Ingress, Message Brokers, FCM Wakeups, and native client Event Emitters.</p>
+    </header>
+
+    <div class="callout callout-info">
+      <div class="callout-title">The Web vs. Mobile Architectural Difference</div>
+      <p>In web applications, open browser tabs maintain long-lived WebSockets or in-memory <code>EventEmitter</code> instances. In mobile applications, <strong>iOS and Android aggressively suspend background apps and kill idle TCP connections to preserve battery life</strong>. This manual details the hybrid event pattern used by industry leaders like Uber, Slack, and WhatsApp.</p>
+    </div>
+
+    <!-- SECTION 1: END-TO-END FLOWCHART -->
+    <h2>1. The End-to-End Event Pipeline (High-Level Architecture)</h2>
+    <p>A mobile client never triggers Firebase directly. Instead, mobile triggers a business action via authenticated REST API, which publishes an internal domain event, and the notification worker routes through our gateway:</p>
+
+    <!-- SVG 1: End to End Architecture -->
+    <div style="background: #020617; border: 1px solid var(--surface-border); border-radius: 12px; padding: 24px; margin: 24px 0;">
+      <svg viewBox="0 0 880 340" width="100%" height="340" xmlns="http://www.w3.org/2000/svg">
+        <rect width="880" height="340" rx="10" fill="#020617"/>
+        <text x="440" y="30" fill="#38bdf8" font-size="15" font-weight="700" text-anchor="middle">Complete Event-Driven Pipeline: Mobile Trigger to Receiver Wakeup</text>
+
+        <!-- 1. Mobile Trigger -->
+        <rect x="30" y="65" width="160" height="100" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+        <text x="110" y="95" fill="#38bdf8" font-size="12" font-weight="700" text-anchor="middle">📱 Step 1: Mobile App</text>
+        <text x="110" y="115" fill="#f8fafc" font-size="10" text-anchor="middle">User taps "Book Ride"</text>
+        <text x="110" y="135" fill="#22c55e" font-size="10" font-family="monospace" text-anchor="middle">POST /api/rides</text>
+        <text x="110" y="150" fill="#94a3b8" font-size="9" text-anchor="middle">(Standard JWT Auth)</text>
+
+        <!-- Arrow -->
+        <line x1="190" y1="115" x2="250" y2="115" stroke="#38bdf8" stroke-width="2"/>
+        <polygon points="250,111 260,115 250,119" fill="#38bdf8"/>
+
+        <!-- 2. Backend API Ingress -->
+        <rect x="260" y="65" width="170" height="100" rx="8" fill="#1e293b" stroke="#0284c7" stroke-width="2"/>
+        <text x="345" y="95" fill="#38bdf8" font-size="12" font-weight="700" text-anchor="middle">⚙️ Step 2: Ingress API</text>
+        <text x="345" y="115" fill="#cbd5e1" font-size="10" text-anchor="middle">Saves Ride to DB</text>
+        <text x="345" y="135" fill="#f59e0b" font-size="10" font-weight="600" text-anchor="middle">Emits Domain Event:</text>
+        <text x="345" y="150" fill="#fef3c7" font-size="9" font-family="monospace" text-anchor="middle">"RideRequestedEvent"</text>
+
+        <!-- Arrow -->
+        <line x1="430" y1="115" x2="490" y2="115" stroke="#38bdf8" stroke-width="2"/>
+        <polygon points="490,111 500,115 490,119" fill="#38bdf8"/>
+
+        <!-- 3. Message Broker -->
+        <rect x="500" y="65" width="160" height="100" rx="8" fill="#0f172a" stroke="#f59e0b" stroke-width="2"/>
+        <text x="580" y="95" fill="#f59e0b" font-size="12" font-weight="700" text-anchor="middle">📬 Step 3: Event Bus</text>
+        <text x="580" y="115" fill="#cbd5e1" font-size="10" text-anchor="middle">RabbitMQ / Kafka /</text>
+        <text x="580" y="130" fill="#cbd5e1" font-size="10" text-anchor="middle">Redis PubSub / MediatR</text>
+        <text x="580" y="150" fill="#22c55e" font-size="9" text-anchor="middle">Decoupled Asynchronous</text>
+
+        <!-- Arrow -->
+        <line x1="660" y1="115" x2="720" y2="115" stroke="#38bdf8" stroke-width="2"/>
+        <polygon points="720,111 730,115 720,119" fill="#38bdf8"/>
+
+        <!-- 4. Notification Worker -->
+        <rect x="730" y="65" width="130" height="100" rx="8" fill="#1e293b" stroke="#818cf8" stroke-width="2"/>
+        <text x="795" y="95" fill="#818cf8" font-size="11" font-weight="700" text-anchor="middle">🔔 Step 4: Worker</text>
+        <text x="795" y="115" fill="#cbd5e1" font-size="9" text-anchor="middle">Catches Event</text>
+        <text x="795" y="130" fill="#cbd5e1" font-size="9" text-anchor="middle">Formats Push</text>
+        <text x="795" y="150" fill="#38bdf8" font-size="9" text-anchor="middle">Calls Connector</text>
+
+        <!-- Bottom loop back to Receiver -->
+        <path d="M 795 165 L 795 240 L 530 240" stroke="#818cf8" stroke-width="2"/>
+        <polygon points="530,236 520,240 530,244" fill="#818cf8"/>
+
+        <!-- Firebase Connector Gateway -->
+        <rect x="300" y="205" width="220" height="70" rx="8" fill="#0284c7"/>
+        <text x="410" y="235" fill="#fff" font-size="12" font-weight="700" text-anchor="middle">🚀 Step 5: Firebase Connector</text>
+        <text x="410" y="255" fill="#e0f2fe" font-size="10" text-anchor="middle">FCM HTTP v1 + Apple APNs Bridge</text>
+
+        <!-- Arrow to Target Device -->
+        <line x1="300" y1="240" x2="190" y2="240" stroke="#22c55e" stroke-width="2"/>
+        <polygon points="190,236 180,240 190,244" fill="#22c55e"/>
+
+        <!-- 6. Target Driver Phone -->
+        <rect x="30" y="200" width="150" height="80" rx="8" fill="#064e3b" stroke="#22c55e" stroke-width="2"/>
+        <text x="105" y="228" fill="#6ee7b7" font-size="12" font-weight="700" text-anchor="middle">🚗 Step 6: Driver</text>
+        <text x="105" y="248" fill="#fff" font-size="10" text-anchor="middle">Phone Buzzes! 🔔</text>
+        <text x="105" y="265" fill="#a7f3d0" font-size="9" text-anchor="middle">Native Event Emitter</text>
+      </svg>
+      <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; margin-top: 8px;">Figure 7.1: The 6-step lifecycle of an asynchronous real-time event triggering mobile notifications</div>
+    </div>
+
+    <!-- SECTION 2: THE 2 RECEIVER STATES -->
+    <h2>2. Handling Real-Time Events on Mobile: The Two Receiving States</h2>
+    <p>When the notification packet arrives at the target device, the mobile operating system handles it based on its current execution state:</p>
+
+    <!-- SVG 2: Hot vs Cold states -->
+    <div style="background: #020617; border: 1px solid var(--surface-border); border-radius: 12px; padding: 24px; margin: 24px 0;">
+      <svg viewBox="0 0 840 260" width="100%" height="260" xmlns="http://www.w3.org/2000/svg">
+        <rect width="840" height="260" rx="10" fill="#020617"/>
+
+        <!-- Cold State Card -->
+        <rect x="30" y="40" width="370" height="190" rx="8" fill="#1e293b" stroke="#ef4444" stroke-width="1.5"/>
+        <text x="215" y="70" fill="#ef4444" font-size="14" font-weight="700" text-anchor="middle">State A: App CLOSED / Locked (Cold)</text>
+        <text x="50" y="100" fill="#cbd5e1" font-size="11">• In-memory WebSockets and EventEmitters are DEAD.</text>
+        <text x="50" y="125" fill="#cbd5e1" font-size="11">• OS wakes up lock screen banner automatically.</text>
+        <text x="50" y="150" fill="#cbd5e1" font-size="11">• Sound plays and device vibrates.</text>
+        <text x="50" y="175" fill="#cbd5e1" font-size="11">• User taps notification ➔ App cold-boots with payload:</text>
+        <text x="50" y="198" fill="#fecaca" font-size="10" font-family="monospace">intent.extras["rideId"] / userInfo["rideId"]</text>
+
+        <!-- Hot State Card -->
+        <rect x="440" y="40" width="370" height="190" rx="8" fill="#1e293b" stroke="#22c55e" stroke-width="1.5"/>
+        <text x="625" y="70" fill="#22c55e" font-size="14" font-weight="700" text-anchor="middle">State B: App OPEN on Screen (Hot)</text>
+        <text x="460" y="100" fill="#cbd5e1" font-size="11">• FCM SDK triggers foreground message callback.</text>
+        <text x="460" y="125" fill="#cbd5e1" font-size="11">• Intercepted by Native Mobile Event Emitter.</text>
+        <text x="460" y="150" fill="#cbd5e1" font-size="11">• Zero page reload needed — UI updates instantly:</text>
+        <text x="460" y="175" fill="#a7f3d0" font-size="10" font-family="monospace">NotificationCenter.post(.onNewRide)</text>
+        <text x="460" y="198" fill="#cbd5e1" font-size="11">• Accept/Decline modal pops up smoothly.</text>
+      </svg>
+    </div>
+
+    <!-- SECTION 3: CODE SNIPPETS FOR EVENT EMITTERS -->
+    <h2>3. Native Mobile Event Emitters: Code Cookbook</h2>
+
+    <h3>A. Swift (iOS) — <code>NotificationCenter</code></h3>
+    <div class="code-block">
+      <div class="code-header"><span>Swift (iOS)</span><span>Swift</span></div>
+      <pre><code>// 1. In AppDelegate (Foreground Listener):
+func userNotificationCenter(_ center: UNUserNotificationCenter,
+                            willPresent notification: UNNotification,
+                            withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+    let userInfo = notification.request.content.userInfo
+    if let rideId = userInfo["rideId"] as? String {
+        // 🔥 Dispatch Event via iOS Native Event Emitter:
+        NotificationCenter.default.post(name: NSNotification.Name("OnNewRideReceived"), object: rideId)
+    }
+    // Show in-app banner or sound:
+    completionHandler([.banner, .sound])
+}
+
+// 2. In DriverMapViewController (Event Listener / Subscriber):
+override func viewDidLoad() {
+    super.viewDidLoad()
+    NotificationCenter.default.addObserver(self, selector: #selector(handleNewRide(_:)),
+                                           name: NSNotification.Name("OnNewRideReceived"), object: nil)
+}
+
+@objc func handleNewRide(_ notification: Notification) {
+    let rideId = notification.object as? String
+    // Refresh map and show Ride Request modal popup!
+}</code></pre>
+    </div>
+
+    <h3>B. Kotlin (Android) — <code>SharedFlow</code> / Event Bus</h3>
+    <div class="code-block">
+      <div class="code-header"><span>Kotlin (Android)</span><span>Kotlin</span></div>
+      <pre><code>// 1. Singleton Event Hub:
+object AppEventBus {
+    val rideEvents = MutableSharedFlow&lt;String&gt;(extraBufferCapacity = 1)
+}
+
+// 2. In MyFirebaseMessagingService:
+override fun onMessageReceived(remoteMessage: RemoteMessage) {
+    val rideId = remoteMessage.data["rideId"]
+    if (rideId != null) {
+        // 🔥 Emit event to active Activities/Fragments:
+        CoroutineScope(Dispatchers.Main).launch {
+            AppEventBus.rideEvents.emit(rideId)
+        }
+    }
+}
+
+// 3. In MainActivity / Fragment:
+lifecycleScope.launch {
+    AppEventBus.rideEvents.collect { rideId ->
+        showAcceptRideDialog(rideId)
+    }
+}</code></pre>
+    </div>
+
+    <h3>C. Flutter (Cross-Platform) — <code>StreamController</code> / EventBus</h3>
+    <div class="code-block">
+      <div class="code-header"><span>Dart (Flutter)</span><span>Dart</span></div>
+      <pre><code>// Global Event Stream
+final StreamController&lt;String&gt; rideEventStream = StreamController&lt;String&gt;.broadcast();
+
+// Foreground Message Handler
+FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+  if (message.data.containsKey('rideId')) {
+    rideEventStream.add(message.data['rideId']!);
+  }
+});
+
+// Inside UI Widget:
+@override
+void initState() {
+  super.initState();
+  rideEventStream.stream.listen((rideId) {
+    showRideModalSheet(context, rideId);
+  });
+}</code></pre>
+    </div>
+
+    <h3>D. React Native — <code>DeviceEventEmitter</code></h3>
+    <div class="code-block">
+      <div class="code-header"><span>JavaScript (React Native)</span><span>JavaScript</span></div>
+      <pre><code>import { DeviceEventEmitter } from 'react-native';
+import messaging from '@react-native-firebase/messaging';
+
+// 1. Foreground listener emits event:
+messaging().onMessage(async remoteMessage => {
+  if (remoteMessage.data?.rideId) {
+    DeviceEventEmitter.emit('onNewRide', remoteMessage.data.rideId);
+  }
+});
+
+// 2. Component listens to event:
+useEffect(() => {
+  const subscription = DeviceEventEmitter.addListener('onNewRide', rideId => {
+    openRideModal(rideId);
+  });
+  return () => subscription.remove();
+}, []);</code></pre>
+    </div>
+
+    <!-- SECTION 4: ARCHITECTURAL SUMMARY -->
+    <h2>4. Summary: The Golden Rules for Mobile Event Architecture</h2>
+    <div class="callout callout-success">
+      <div class="callout-title">Architecture Takeaways</div>
+      <ul>
+        <li><strong>Never call FCM directly from client apps:</strong> Mobile triggers business actions via REST/gRPC. The backend broker triggers the push gateway.</li>
+        <li><strong>FCM is the bridge across OS suspension:</strong> It is the only reliable way to reach a user when their phone is locked in their pocket.</li>
+        <li><strong>Use Native Event Emitters in Foreground:</strong> When the app is open, catch the push in the foreground listener and emit into <code>NotificationCenter</code> (iOS), <code>SharedFlow</code> (Android), or <code>StreamController</code> (Flutter) for silky-smooth UI updates without reloading screens.</li>
+      </ul>
+    </div>
+
+  </main>
+</body>
+</html>

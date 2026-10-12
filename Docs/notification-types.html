@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notification Types & Payloads — Firebase Push Connector</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Navigation Sidebar -->
+  <nav id="sidebar">
+    <a href="index.html" class="brand-title">
+      <span>🚀 Firebase Connector</span>
+      <span class="brand-badge">.NET 8</span>
+    </a>
+
+    <div class="nav-section">
+      <div class="nav-header">Documentation Hub</div>
+      <a class="nav-link" href="index.html">← Back to Overview</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Architecture Decision Records</div>
+      <a class="nav-link" href="ADR/index.html">ADR Index & Logs</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Technical Manuals</div>
+      <a class="nav-link" href="architecture.html">System Architecture</a>
+      <a class="nav-link" href="presence-lifecycle.html">Presence & Heartbeat</a>
+      <a class="nav-link" href="ios-integration.html">Apple iOS & APNs (.p8)</a>
+      <a class="nav-link active" href="notification-types.html">Notification Types & Payloads</a>
+      <a class="nav-link" href="mobile-clients.html">Mobile Client SDKs</a>
+      <a class="nav-link" href="deployment.html">Podman & Docker Deployment</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main id="content">
+    <header class="doc-header">
+      <h1>📬 Notification Types & Payload Specification</h1>
+      <p class="lead">Complete reference manual for all 6 FCM notification types, targeting mechanisms (Unicast, Topic, Condition), and platform-specific headers.</p>
+    </header>
+
+    <div class="callout callout-info">
+      <div class="callout-title">Unified Delivery Contract</div>
+      <p>All push notifications are submitted through a single unified endpoint: <code>POST /api/notifications/send</code>. The router automatically translates fields into native Android Channels, Apple APNs headers, and Web Push options.</p>
+    </div>
+
+    <!-- Notification Types Comparison SVG -->
+    <div style="background: #020617; border: 1px solid var(--surface-border); border-radius: 12px; padding: 24px; margin: 24px 0;">
+      <svg viewBox="0 0 880 320" width="100%" height="320" xmlns="http://www.w3.org/2000/svg">
+        <rect width="880" height="320" rx="10" fill="#020617"/>
+        <text x="440" y="32" fill="#38bdf8" font-size="16" font-weight="700" text-anchor="middle">Overview: 6 Supported FCM Notification Types</text>
+
+        <!-- 1. Visible Alert -->
+        <rect x="30" y="60" width="250" height="110" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+        <text x="50" y="90" fill="#38bdf8" font-size="13" font-weight="700">1. Visible Alert Push 🔔</text>
+        <text x="50" y="112" fill="#94a3b8" font-size="11">• Standard lock screen banner</text>
+        <text x="50" y="130" fill="#94a3b8" font-size="11">• Sound, badge, vibration</text>
+        <text x="50" y="148" fill="#94a3b8" font-size="11">• Use: Chat, updates, reminders</text>
+
+        <!-- 2. Silent Background -->
+        <rect x="315" y="60" width="250" height="110" rx="8" fill="#1e293b" stroke="#818cf8" stroke-width="1.5"/>
+        <text x="335" y="90" fill="#818cf8" font-size="13" font-weight="700">2. Silent Push (Data-Only) 🔕</text>
+        <text x="335" y="112" fill="#94a3b8" font-size="11">• 100% invisible to user</text>
+        <text x="335" y="130" fill="#94a3b8" font-size="11">• Wakes up app for background sync</text>
+        <text x="335" y="148" fill="#94a3b8" font-size="11">• Use: Database sync, cache warm</text>
+
+        <!-- 3. Rich Media -->
+        <rect x="600" y="60" width="250" height="110" rx="8" fill="#1e293b" stroke="#22c55e" stroke-width="1.5"/>
+        <text x="620" y="90" fill="#22c55e" font-size="13" font-weight="700">3. Rich Media (Images) 🖼️</text>
+        <text x="620" y="112" fill="#94a3b8" font-size="11">• Large image preview banner</text>
+        <text x="620" y="130" fill="#94a3b8" font-size="11">• BigPicture (Android) / APNs media</text>
+        <text x="620" y="148" fill="#94a3b8" font-size="11">• Use: Promos, maps, receipts</text>
+
+        <!-- 4. Action Buttons -->
+        <rect x="30" y="190" width="250" height="110" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+        <text x="50" y="220" fill="#f59e0b" font-size="13" font-weight="700">4. Actionable (Buttons) 🔘</text>
+        <text x="50" y="242" fill="#94a3b8" font-size="11">• Inline interactive buttons</text>
+        <text x="50" y="260" fill="#94a3b8" font-size="11">• "Accept" / "Decline" actions</text>
+        <text x="50" y="278" fill="#94a3b8" font-size="11">• Use: Ride dispatch, approvals</text>
+
+        <!-- 5. Collapsible ETA -->
+        <rect x="315" y="190" width="250" height="110" rx="8" fill="#1e293b" stroke="#06b6d4" stroke-width="1.5"/>
+        <text x="335" y="220" fill="#06b6d4" font-size="13" font-weight="700">5. Collapsible (Live ETA) ⏱️</text>
+        <text x="335" y="242" fill="#94a3b8" font-size="11">• Replaces old alert in-place</text>
+        <text x="335" y="260" fill="#94a3b8" font-size="11">• Zero notification tray spam</text>
+        <text x="335" y="278" fill="#94a3b8" font-size="11">• Use: Delivery ETA, sports score</text>
+
+        <!-- 6. Critical Alert -->
+        <rect x="600" y="190" width="250" height="110" rx="8" fill="#1e293b" stroke="#ef4444" stroke-width="1.5"/>
+        <text x="620" y="220" fill="#ef4444" font-size="13" font-weight="700">6. Critical / Emergency 🚨</text>
+        <text x="620" y="242" fill="#94a3b8" font-size="11">• Bypasses Focus & DND modes</text>
+        <text x="620" y="260" fill="#94a3b8" font-size="11">• High sound volume override</text>
+        <text x="620" y="278" fill="#94a3b8" font-size="11">• Use: Security breach, disaster</text>
+      </svg>
+    </div>
+
+    <!-- Detailed Breakdowns -->
+    <h2>1. Visible Alert Notification</h2>
+    <p>Standard push notification that alerts the user with a title, body message, and device sound.</p>
+    <div class="code-block">
+      <div class="code-header"><span>POST /api/notifications/send — Alert Request</span><span>JSON</span></div>
+      <pre><code>{
+  "userId": "alex@company.com",
+  "title": "Order Dispatched 🚚",
+  "body": "Your order #8291 is on its way to your delivery address.",
+  "isSilent": false,
+  "priority": "High"
+}</code></pre>
+    </div>
+
+    <h2>2. Silent Push Notification (Background Sync)</h2>
+    <p>Silent pushes do not show any banner, badge, or sound. They wake up the mobile app in the background for up to 30 seconds to fetch data from the server and update local storage.</p>
+    <div class="callout callout-warning">
+      <div class="callout-title">iOS Requirement</div>
+      <p>For iOS to deliver silent notifications, the app must have the <strong>Background Modes > Remote notifications</strong> capability enabled in Xcode, and our backend sets <code>apns-push-type: background</code> and <code>content-available: 1</code>.</p>
+    </div>
+    <div class="code-block">
+      <div class="code-header"><span>POST /api/notifications/send — Silent Push</span><span>JSON</span></div>
+      <pre><code>{
+  "userId": "alex@company.com",
+  "isSilent": true,
+  "data": {
+    "action": "SYNC_DATABASE",
+    "resource": "orders",
+    "updatedAfter": "2026-10-13T00:00:00Z"
+  }
+}</code></pre>
+    </div>
+
+    <h2>3. Rich Media Push Notification (With Image)</h2>
+    <p>Displays a high-resolution expandable image banner. Ideal for marketing promotions, map routes, and product previews.</p>
+    <div class="code-block">
+      <div class="code-header"><span>POST /api/notifications/send — Rich Media</span><span>JSON</span></div>
+      <pre><code>{
+  "userId": "alex@company.com",
+  "title": "Special 50% Weekend Offer! 🍕",
+  "body": "Order your favorite pizza now with coupon WEEKEND50.",
+  "imageUrl": "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800",
+  "data": {
+    "promoCode": "WEEKEND50",
+    "deepLink": "app://offers/weekend"
+  }
+}</code></pre>
+    </div>
+
+    <h2>4. Interactive / Actionable Push (Action Buttons)</h2>
+    <p>Allows the user to respond directly from the notification shade (e.g. "Accept" / "Reject") without opening the app.</p>
+    <div class="code-block">
+      <div class="code-header"><span>POST /api/notifications/send — Actionable Request</span><span>JSON</span></div>
+      <pre><code>{
+  "userId": "driver_alex@company.com",
+  "title": "New Ride Request: 3.2 km",
+  "body": "Pickup at Grand Central Terminal ($18.50 fare)",
+  "actionCategory": "RIDE_REQUEST_ACTIONS",
+  "priority": "High",
+  "data": {
+    "rideId": "ride_92812",
+    "passenger": "Sarah Connor"
+  }
+}</code></pre>
+    </div>
+
+    <h2>5. Collapsible Notification (Live ETA / Live Score)</h2>
+    <p>Prevents flooding the notification tray. When multiple updates arrive for the same tracking item, each new update replaces the previous one on the lock screen.</p>
+    <div class="code-block">
+      <div class="code-header"><span>POST /api/notifications/send — Collapsible ETA</span><span>JSON</span></div>
+      <pre><code>{
+  "userId": "alex@company.com",
+  "title": "Driver Arriving in 2 Minutes",
+  "body": "Toyota Prius (ABC-1234) is turning onto your street.",
+  "collapseKey": "ORDER_8291_ETA",
+  "priority": "High"
+}</code></pre>
+    </div>
+
+    <h2>6. Time-Sensitive / Critical Notification</h2>
+    <p>Used for critical alerts such as security breaches, fraud warnings, or severe weather alerts. High urgency flags bypass iOS Focus modes and Android Do Not Disturb.</p>
+    <div class="code-block">
+      <div class="code-header"><span>POST /api/notifications/send — Critical Alert</span><span>JSON</span></div>
+      <pre><code>{
+  "userId": "alex@company.com",
+  "title": "🚨 Urgent Security Alert",
+  "body": "Unrecognized login attempt detected from IP 198.51.100.22.",
+  "priority": "Critical",
+  "data": {
+    "sessionId": "sess_81726",
+    "action": "LOCK_ACCOUNT"
+  }
+}</code></pre>
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid var(--surface-border); margin: 40px 0;">
+
+    <h2>📡 Broadcast & Topic Targeting Modes</h2>
+    <p>In addition to targeting individual users or specific device tokens, the gateway supports high-scale Pub/Sub broadcasting:</p>
+
+    <h3>A. Topic Broadcast (Publish to Millions)</h3>
+    <p>Broadcasts instantly to millions of devices without needing to maintain large token lists:</p>
+    <div class="code-block">
+      <div class="code-header"><span>POST /api/notifications/send — Topic Broadcast</span><span>JSON</span></div>
+      <pre><code>{
+  "topic": "drivers_city_ny",
+  "title": "High Demand Surge in Manhattan! ⚡",
+  "body": "Surge multiplier 2.5x active in Midtown.",
+  "priority": "High"
+}</code></pre>
+    </div>
+
+    <h3>B. Topic Subscription & Management APIs</h3>
+    <div class="code-block">
+      <div class="code-header"><span>POST /api/topics/subscribe</span><span>JSON</span></div>
+      <pre><code>{
+  "topic": "drivers_city_ny",
+  "tokens": [
+    "fcm_device_token_1",
+    "fcm_device_token_2"
+  ]
+}</code></pre>
+    </div>
+
+    <h3>C. Boolean Condition Targeting</h3>
+    <p>Targets devices matching compound boolean expressions of topic memberships:</p>
+    <div class="code-block">
+      <div class="code-header"><span>POST /api/notifications/send — Condition Broadcast</span><span>JSON</span></div>
+      <pre><code>{
+  "condition": "'drivers_city_ny' in topics && ('premium_tier' in topics || 'ev_vehicles' in topics)",
+  "title": "Exclusive EV Incentive Program 🔋",
+  "body": "Earn extra bonus rewards for charging during off-peak hours."
+}</code></pre>
+    </div>
+
+    <h3>D. Presence-Conditional Push (<code>onlyIfActive: true</code>)</h3>
+    <p>When sending notifications that only matter if the user is actively using the app (e.g. live chat typing, live radar ping), set <code>onlyIfActive: true</code>. If the user's heartbeat is older than 90 seconds, the message is skipped, saving server bandwidth and battery life.</p>
+    <div class="code-block">
+      <div class="code-header"><span>POST /api/notifications/send — Active Presence Check</span><span>JSON</span></div>
+      <pre><code>{
+  "userId": "alex@company.com",
+  "title": "New in-app chat message",
+  "body": "Support agent is typing...",
+  "onlyIfActive": true
+}</code></pre>
+    </div>
+
+  </main>
+</body>
+</html>

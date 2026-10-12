@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Step-by-Step Setup & Verification Guide — Firebase Push Connector</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+  <!-- Navigation Sidebar -->
+  <nav id="sidebar">
+    <a href="../index.html" class="brand-title">
+      <span>🚀 Firebase Connector</span>
+      <span class="brand-badge">.NET 8</span>
+    </a>
+
+    <div class="nav-section">
+      <div class="nav-header">Documentation Hub</div>
+      <a class="nav-link" href="../index.html">← Back to Overview</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Step-by-Step Manuals</div>
+      <a class="nav-link" href="index.html">← Manuals Portal</a>
+      <a class="nav-link active" href="step-by-step-setup-guide.html">1. Setup & Verification</a>
+      <a class="nav-link" href="mobile-apps-integration-guide.html">2. Mobile Apps & Multi-Project</a>
+      <a class="nav-link" href="event-driven-mobile-architecture.html">3. Real-Time Event System</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Architecture Decision Records</div>
+      <a class="nav-link" href="../ADR/index.html">ADR Master Index (001–006)</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">System Specifications</div>
+      <a class="nav-link" href="../architecture.html">System Architecture</a>
+      <a class="nav-link" href="../presence-lifecycle.html">Presence & Heartbeat</a>
+      <a class="nav-link" href="../ios-integration.html">Apple iOS & APNs (.p8)</a>
+      <a class="nav-link" href="../notification-types.html">Notification Types & Payloads</a>
+      <a class="nav-link" href="../mobile-clients.html">Mobile Client SDKs</a>
+      <a class="nav-link" href="../deployment.html">Podman & Docker Deployment</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main id="content">
+    <header class="doc-header">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+        <span class="badge badge-primary">Manual 01</span>
+        <span class="badge badge-success">Production Ready</span>
+      </div>
+      <h1>🛠️ Step-by-Step Setup & Verification Guide</h1>
+      <p class="lead">Complete button-by-button walkthrough: creating your Google Firebase project, generating OAuth2 Service Account credentials, deploying via Podman/Docker, and verifying real push delivery.</p>
+    </header>
+
+    <div class="callout callout-info">
+      <div class="callout-title">Who is this manual for?</div>
+      <p>This guide is written for any engineer wanting to set up and verify the Firebase Push Connector from scratch in under 15 minutes without guessing what buttons to click in Google Cloud.</p>
+    </div>
+
+    <!-- PHASE 1: FIREBASE CONSOLE -->
+    <h2>Phase 1: Firebase Console Setup (Click-by-Click)</h2>
+    <p>Follow these exact steps in your web browser:</p>
+
+    <h3>Step 1.1: Create the Firebase Project</h3>
+    <ol>
+      <li>Open <a href="https://console.firebase.google.com/" target="_blank" style="color: var(--primary);">https://console.firebase.google.com/</a> and log in with your Google account.</li>
+      <li>Click the card labeled <strong>+ Add project</strong> (or <strong>Create a project</strong>).</li>
+      <li><strong>Step 1 of 3:</strong> Name your project (e.g., <code>fcmpoc-connector</code>), accept the terms, and click <strong>Continue</strong>.</li>
+      <li><strong>Step 2 of 3:</strong> Disable Google Analytics toggle (simplifies setup for testing) and click <strong>Create project</strong>.</li>
+      <li>Wait 20 seconds for provisioning. When it displays <em>"Your new project is ready"</em>, click <strong>Continue</strong>.</li>
+    </ol>
+
+    <h3>Step 1.2: Generate the Backend Service Account Key (.json)</h3>
+    <p>This is the master OAuth2 credential that authorizes your .NET backend to send notifications via the <strong>FCM HTTP v1 API</strong>:</p>
+    <ol>
+      <li>In the top-left sidebar of the Firebase Console, locate <strong>Project Overview</strong>.</li>
+      <li>Click the <strong>Gear Icon (⚙️)</strong> immediately to the right and select <strong>Project settings</strong>.</li>
+      <li>Switch to the <strong>Service accounts</strong> tab at the top.</li>
+      <li>Under <strong>Firebase Admin SDK</strong>, click the blue button: <strong>Generate new private key</strong>.</li>
+      <li>A confirmation modal will appear warning you to keep the key confidential. Click <strong>Generate key</strong>.</li>
+      <li>Your browser downloads a file named like <code>fcmpoc-connector-firebase-adminsdk-xxxxx.json</code>.</li>
+      <li>Place this file in your project secrets folder: <code>secrets/firebase_key.json</code> or copy its contents into your <code>.env</code> file.</li>
+    </ol>
+
+    <div class="callout callout-warning">
+      <div class="callout-title">Corporate Organization Policy Edge Case</div>
+      <p>If your enterprise Google Cloud organization enforces <code>iam.disableServiceAccountKeyCreation</code>, key creation may be blocked. To resolve this, ask your GCP admin for a key-creation exemption for this project, or use a personal Google account for local POC validation.</p>
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid var(--surface-border); margin: 40px 0;">
+
+    <!-- PHASE 2: CLIENT RECEIVER -->
+    <h2>Phase 2: Setting Up the Fast Client Receiver (Web Simulator)</h2>
+    <p>To test real notifications immediately without compiling a mobile Android APK or iOS app:</p>
+
+    <ol>
+      <li>In Firebase Console > <strong>Project settings</strong> > <strong>General</strong> tab, scroll down to <strong>Your apps</strong>.</li>
+      <li>Click the <strong>Web icon (<code>&lt;/&gt;</code>)</strong>.</li>
+      <li>Enter an app nickname (e.g. <code>TestWebClient</code>) and click <strong>Register app</strong>.</li>
+      <li>Copy the generated <code>firebaseConfig</code> object (contains <code>apiKey</code>, <code>projectId</code>, <code>messagingSenderId</code>, <code>appId</code>).</li>
+      <li>Open <code>mobile-simulator/index.html</code> in your project, paste these values into the configuration section, and save.</li>
+    </ol>
+
+    <hr style="border: 0; border-top: 1px solid var(--surface-border); margin: 40px 0;">
+
+    <!-- PHASE 3: RUNNING BACKEND -->
+    <h2>Phase 3: Running the Backend (Podman or .NET CLI)</h2>
+
+    <h3>Option A: Using Podman Compose / Docker Compose (Recommended)</h3>
+    <div class="code-block">
+      <div class="code-header"><span>Terminal</span><span>Bash / PowerShell</span></div>
+      <pre><code># 1. Create your .env configuration
+cp .env.example .env
+
+# 2. Add your service account JSON into .env
+# FIREBASE_APP_FCMPOC_JSON='{"type":"service_account", ...}'
+
+# 3. Spin up both Redis 7 and the .NET 8 API:
+podman-compose up -d
+# or: docker compose up -d
+
+# 4. View live logs:
+podman logs -f fcmpoc-api</code></pre>
+    </div>
+
+    <h3>Option B: Using .NET 8 CLI Locally</h3>
+    <div class="code-block">
+      <div class="code-header"><span>Terminal</span><span>Bash / PowerShell</span></div>
+      <pre><code># 1. Start Redis in background:
+podman run -d --name fcmpoc-redis -p 6379:6379 redis:7-alpine
+
+# 2. Run the .NET API:
+dotnet run --project "src/FirebaseConnector/FirebaseConnector.csproj"</code></pre>
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid var(--surface-border); margin: 40px 0;">
+
+    <!-- PHASE 4: VERIFICATION -->
+    <h2>Phase 4: Step-by-Step Delivery Verification</h2>
+
+    <ol>
+      <li><strong>Open the Web Simulator:</strong> Navigate to <a href="http://localhost:5000/simulator" target="_blank" style="color: var(--primary);">http://localhost:5000/simulator</a> in Chrome or Edge.</li>
+      <li><strong>Grant Notification Permission:</strong> Click the browser prompt to Allow notifications.</li>
+      <li><strong>Obtain Real Device Token:</strong> Click <strong>"Register / Login"</strong>. The simulator fetches a genuine Google-issued cryptographic FCM Device Token and automatically posts it to <code>POST /api/devices/register</code>.</li>
+      <li><strong>Start Heartbeat:</strong> The simulator begins transmitting a 45-second heartbeat, establishing a 90-second active presence window in Redis.</li>
+      <li><strong>Trigger Push Notification:</strong> Open <a href="http://localhost:5000/swagger" target="_blank" style="color: var(--primary);">http://localhost:5000/swagger</a> or run this curl command:
+        <div class="code-block">
+          <div class="code-header"><span>Curl Command</span><span>Bash / PowerShell</span></div>
+          <pre><code>curl -X POST http://localhost:5000/api/notifications/send \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "test_user_simulator",
+    "title": "Delivery Arrived! 🍕",
+    "body": "Your order #1082 has been delivered.",
+    "onlyIfActive": true,
+    "priority": "High"
+  }'</code></pre>
+        </div>
+      </li>
+      <li><strong>Verify:</strong> A system notification banner pops up on your Windows/Mac desktop screen within 1–2 seconds!</li>
+    </ol>
+
+  </main>
+</body>
+</html>

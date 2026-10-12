@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architecture Decision Records (ADRs) — Firebase Push Connector</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+  <!-- Navigation Sidebar -->
+  <nav id="sidebar">
+    <a href="../index.html" class="brand-title">
+      <span>🚀 Firebase Connector</span>
+      <span class="brand-badge">.NET 8</span>
+    </a>
+
+    <div class="nav-section">
+      <div class="nav-header">Documentation Hub</div>
+      <a class="nav-link" href="../index.html">← Back to Overview</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Architecture Decision Records</div>
+      <a class="nav-link active" href="index.html">ADR Index & Logs</a>
+      <a class="nav-link" href="ADR-001-fcm-http-v1.html">ADR-001: FCM HTTP v1</a>
+      <a class="nav-link" href="ADR-002-sliding-presence.html">ADR-002: Sliding Presence</a>
+      <a class="nav-link" href="ADR-003-multi-tenant-routing.html">ADR-003: Multi-Tenant</a>
+      <a class="nav-link" href="ADR-004-zero-secrets-in-code.html">ADR-004: Zero Secrets</a>
+      <a class="nav-link" href="ADR-005-unified-payload.html">ADR-005: Unified Contract</a>
+      <a class="nav-link" href="ADR-006-multi-app-targeting-and-broadcasting.html">ADR-006: Multi-App & Broadcast</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Step-by-Step Manuals</div>
+      <a class="nav-link" href="../Manual/index.html">Manuals Library</a>
+      <a class="nav-link" href="../Manual/step-by-step-setup-guide.html">1. Setup & Verification</a>
+      <a class="nav-link" href="../Manual/mobile-apps-integration-guide.html">2. Mobile Apps & Multi-Project</a>
+      <a class="nav-link" href="../Manual/event-driven-mobile-architecture.html">3. Real-Time Event System</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Technical Manuals</div>
+      <a class="nav-link" href="../architecture.html">System Architecture</a>
+      <a class="nav-link" href="../presence-lifecycle.html">Presence & Heartbeat</a>
+      <a class="nav-link" href="../ios-integration.html">Apple iOS & APNs (.p8)</a>
+      <a class="nav-link" href="../notification-types.html">Notification Types & Payloads</a>
+      <a class="nav-link" href="../mobile-clients.html">Mobile Client SDKs</a>
+      <a class="nav-link" href="../deployment.html">Podman & Docker Deployment</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main id="content">
+    <header class="doc-header">
+      <h1>🏛️ Architecture Decision Records (ADR)</h1>
+      <p class="lead">Formal documentation capturing significant architectural decisions, business trade-offs, and design rationale across the system lifecycle.</p>
+    </header>
+
+    <div class="callout callout-info">
+      <div class="callout-title">What is an ADR?</div>
+      <p>An Architecture Decision Record (ADR) captures an important architectural decision made along with its context and consequences. Each record follows the Michael Nygard template (Context, Decision, Consequences, Status).</p>
+    </div>
+
+    <h2>📋 Master ADR Registry</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>ADR ID</th>
+          <th>Title</th>
+          <th>Status</th>
+          <th>Date</th>
+          <th>Decision Area</th>
+          <th>View Document</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>ADR-001</strong></td>
+          <td>Migration to FCM HTTP v1 Protocol & Admin SDK</td>
+          <td><span class="badge badge-success">Approved</span></td>
+          <td>Oct 2026</td>
+          <td>Protocol & Auth</td>
+          <td><a href="ADR-001-fcm-http-v1.html" style="color: var(--primary); font-weight: 600;">Read ADR-001 →</a></td>
+        </tr>
+        <tr>
+          <td><strong>ADR-002</strong></td>
+          <td>Active Presence Tracking via Redis Sliding TTL</td>
+          <td><span class="badge badge-success">Approved</span></td>
+          <td>Oct 2026</td>
+          <td>Presence & Reliability</td>
+          <td><a href="ADR-002-sliding-presence.html" style="color: var(--primary); font-weight: 600;">Read ADR-002 →</a></td>
+        </tr>
+        <tr>
+          <td><strong>ADR-003</strong></td>
+          <td>Multi-Tenant Routing via Named FirebaseApp Instances</td>
+          <td><span class="badge badge-success">Approved</span></td>
+          <td>Oct 2026</td>
+          <td>Multi-Tenant Architecture</td>
+          <td><a href="ADR-003-multi-tenant-routing.html" style="color: var(--primary); font-weight: 600;">Read ADR-003 →</a></td>
+        </tr>
+        <tr>
+          <td><strong>ADR-004</strong></td>
+          <td>Zero Secrets Committed: Environment Variable Secret Pattern</td>
+          <td><span class="badge badge-success">Approved</span></td>
+          <td>Oct 2026</td>
+          <td>Security & Compliance</td>
+          <td><a href="ADR-004-zero-secrets-in-code.html" style="color: var(--primary); font-weight: 600;">Read ADR-004 →</a></td>
+        </tr>
+        <tr>
+          <td><strong>ADR-005</strong></td>
+          <td>Unified Multi-Type Notification Payload Contract</td>
+          <td><span class="badge badge-success">Approved</span></td>
+          <td>Oct 2026</td>
+          <td>API Design</td>
+          <td><a href="ADR-005-unified-payload.html" style="color: var(--primary); font-weight: 600;">Read ADR-005 →</a></td>
+        </tr>
+        <tr>
+          <td><strong>ADR-006</strong></td>
+          <td>Multi-App Token Isolation & Selective Broadcasting in FCM</td>
+          <td><span class="badge badge-success">Approved</span></td>
+          <td>Oct 2026</td>
+          <td>Multi-App Architecture</td>
+          <td><a href="ADR-006-multi-app-targeting-and-broadcasting.html" style="color: var(--primary); font-weight: 600;">Read ADR-006 →</a></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 style="margin-top: 48px;">📑 Detailed ADR Summaries</h2>
+
+    <div class="card-grid">
+
+      <a href="ADR-001-fcm-http-v1.html" class="card">
+        <span class="badge badge-success">ADR-001</span>
+        <h3 style="margin: 12px 0 8px;">FCM HTTP v1 Protocol</h3>
+        <p>Retires the deprecated FCM Legacy Server Key API in favor of Google OAuth2 Service Accounts and short-lived tokens.</p>
+        <span class="badge badge-primary">Full Spec →</span>
+      </a>
+
+      <a href="ADR-002-sliding-presence.html" class="card">
+        <span class="badge badge-success">ADR-002</span>
+        <h3 style="margin: 12px 0 8px;">Redis Sliding TTL Presence</h3>
+        <p>Uses a 45s client ping and 90s sliding expiration in Redis to prevent sending wasteful pushes to idle devices.</p>
+        <span class="badge badge-primary">Full Spec →</span>
+      </a>
+
+      <a href="ADR-003-multi-tenant-routing.html" class="card">
+        <span class="badge badge-success">ADR-003</span>
+        <h3 style="margin: 12px 0 8px;">Multi-Tenant Named Apps</h3>
+        <p>Enables a single backend cluster to serve multiple independent mobile apps, each with their own Firebase project.</p>
+        <span class="badge badge-primary">Full Spec →</span>
+      </a>
+
+      <a href="ADR-004-zero-secrets-in-code.html" class="card">
+        <span class="badge badge-success">ADR-004</span>
+        <h3 style="margin: 12px 0 8px;">Zero Secrets in Source</h3>
+        <p>Eliminates checked-in JSON private key files. Injects credentials securely at container runtime via <code>FIREBASE_APP_*_JSON</code>.</p>
+        <span class="badge badge-primary">Full Spec →</span>
+      </a>
+
+      <a href="ADR-005-unified-payload.html" class="card">
+        <span class="badge badge-success">ADR-005</span>
+        <h3 style="margin: 12px 0 8px;">Unified Payload Contract</h3>
+        <p>Exposes one clean API contract that handles visible alerts, background sync, rich images, actionable buttons, and live ETA.</p>
+        <span class="badge badge-primary">Full Spec →</span>
+      </a>
+
+      <a href="ADR-006-multi-app-targeting-and-broadcasting.html" class="card">
+        <span class="badge badge-success">ADR-006</span>
+        <h3 style="margin: 12px 0 8px;">Multi-App Token Isolation & Broadcast</h3>
+        <p>How Firebase cryptographically isolates App A vs App B tokens and how to broadcast to millions of App A users with zero impact on App B.</p>
+        <span class="badge badge-primary">Full Spec →</span>
+      </a>
+
+    </div>
+
+  </main>
+</body>
+</html>

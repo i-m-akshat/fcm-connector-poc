@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobile Device Simulator - FCM POC</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --phone-border: #334155;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+    
+    /* Phone Shell */
+    .phone-mockup {
+      width: 420px;
+      height: 820px;
+      background: #090d16;
+      border: 8px solid var(--phone-border);
+      border-radius: 40px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7);
+      position: relative;
+      overflow: hidden;
+    }
+    .phone-notch {
+      width: 140px; height: 18px; background: var(--phone-border);
+      border-radius: 0 0 14px 14px; margin: 0 auto;
+    }
+    .phone-content {
+      flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
+    }
+    h2 { font-size: 1.15rem; color: var(--primary); text-align: center; }
+    .badge {
+      display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; text-align: center;
+    }
+    .badge-offline { background: #475569; color: #cbd5e1; }
+    .badge-online { background: rgba(34, 197, 94, 0.2); color: var(--success); border: 1px solid var(--success); }
+    
+    .card {
+      background: var(--card-bg); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);
+    }
+    label { font-size: 0.72rem; color: var(--text-muted); display: block; margin-bottom: 3px; }
+    input, select {
+      width: 100%; background: #0f172a; border: 1px solid #334155; color: #fff; padding: 8px; border-radius: 8px; font-size: 0.82rem; margin-bottom: 8px;
+    }
+    button {
+      width: 100%; padding: 10px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 0.85rem;
+    }
+    .btn-primary { background: var(--primary); color: #0f172a; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-danger { background: var(--danger); color: #fff; margin-top: 6px; }
+    .btn-secondary { background: #334155; color: #fff; margin-top: 6px; }
+    
+    .token-box {
+      font-family: monospace; font-size: 0.68rem; word-break: break-all; background: #0b1120; padding: 8px; border-radius: 6px; color: #38bdf8; max-height: 65px; overflow-y: auto;
+    }
+    .log-container {
+      flex: 1; min-height: 120px; background: #0b1120; border-radius: 8px; padding: 8px; font-size: 0.72rem; font-family: monospace; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;
+    }
+    .log-item { padding: 4px 6px; border-radius: 4px; background: rgba(255,255,255,0.03); }
+    .log-success { border-left: 3px solid var(--success); }
+    .log-info { border-left: 3px solid var(--primary); }
+    .log-warn { border-left: 3px solid var(--warning); }
+    
+    /* Pop-up Toast */
+    .toast-box {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 12px;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);
+      animation: popDown 0.3s ease;
+      display: none;
+    }
+    .toast-title { font-weight: 700; font-size: 0.85rem; }
+    .toast-body { font-size: 0.75rem; margin-top: 2px; }
+    @keyframes popDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  </style>
+</head>
+<body>
+
+<div class="phone-mockup">
+  <div class="phone-notch"></div>
+  <div class="phone-content">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h2>📱 Mobile Dummy Client</h2>
+      <span id="presenceBadge" class="badge badge-offline">OFFLINE</span>
+    </div>
+
+    <!-- In-App Notification Toast Banner -->
+    <div class="toast-box" id="toastBox">
+      <div class="toast-title" id="toastTitle">🚀 New Notification</div>
+      <div class="toast-body" id="toastBody">Message body here...</div>
+    </div>
+
+    <!-- 1. Configuration & Login -->
+    <div class="card" id="authSection">
+      <label>Target App Family</label>
+      <select id="appId">
+        <option value="FCMPOC">FCMPOC (Your Configured App)</option>
+        <option value="CustomerApp">CustomerApp</option>
+        <option value="DriverApp">DriverApp</option>
+        <option value="MerchantApp">MerchantApp</option>
+      </select>
+
+      <label>User Email / Identifier</label>
+      <input type="email" id="userEmail" value="driver_alex@company.com" placeholder="alex@company.com">
+
+      <label>Backend API Base URL</label>
+      <input type="text" id="apiBase" value="http://localhost:5000/api" placeholder="http://localhost:5000/api">
+
+      <label>Firebase Web Push Key (VAPID Key)</label>
+      <input type="text" id="vapidKey" placeholder="Paste VAPID key" value="BKS-M0OHaA2oVEaLPIJhckoM_090Sm5TD4lHnBsvGAP7af0OIFgvu-OinnYvz4AUpp4ByHLcLsR52E1mZ9bMsjc">
+
+      <button class="btn-primary" id="btnLogin">🔑 Login & Register Device</button>
+    </div>
+
+    <!-- 2. Active Device Controls (Hidden until logged in) -->
+    <div class="card" id="deviceControls" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <span style="font-size: 0.8rem; font-weight: bold;" id="currentUserLabel">User: None</span>
+        <span style="font-size: 0.7rem; color: var(--text-muted);" id="heartbeatTimer">Heartbeat in: 45s</span>
+      </div>
+
+      <label>FCM Device Token (Acquired from Google)</label>
+      <div class="token-box" id="tokenDisplay">Acquiring token...</div>
+
+      <div style="margin-top: 10px; display: flex; gap: 8px;">
+        <button class="btn-secondary" id="btnToggleApp">⏸️ Minimize App</button>
+        <button class="btn-danger" id="btnLogout">🚪 Logout</button>
+      </div>
+    </div>
+
+    <!-- 3. Real-time Notification Feed -->
+    <label>Incoming Notifications Feed</label>
+    <div class="log-container" id="logContainer">
+      <div class="log-item log-info">[System] Configured with project 'fcmpoc-connector'. Click Login to connect.</div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  // Your Web App's Firebase Configuration (Replace with your Firebase Console values)
+  const firebaseConfig = {
+    apiKey: "YOUR_FIREBASE_WEB_API_KEY",
+    authDomain: "your-project.firebaseapp.com",
+    projectId: "your-project-id",
+    storageBucket: "your-project.firebasestorage.app",
+    messagingSenderId: "000000000000",
+    appId: "1:000000000000:web:0000000000000000000000",
+    measurementId: "G-0000000000"
+  };
+
+  let deviceToken = null;
+  let countdownInterval = null;
+  let nextHeartbeatSec = 45;
+  let isAppActive = true;
+
+  const btnLogin = document.getElementById('btnLogin');
+  const btnLogout = document.getElementById('btnLogout');
+  const btnToggleApp = document.getElementById('btnToggleApp');
+  const authSection = document.getElementById('authSection');
+  const deviceControls = document.getElementById('deviceControls');
+  const presenceBadge = document.getElementById('presenceBadge');
+  const currentUserLabel = document.getElementById('currentUserLabel');
+  const tokenDisplay = document.getElementById('tokenDisplay');
+  const logContainer = document.getElementById('logContainer');
+  const heartbeatTimer = document.getElementById('heartbeatTimer');
+  const toastBox = document.getElementById('toastBox');
+  const toastTitle = document.getElementById('toastTitle');
+  const toastBody = document.getElementById('toastBody');
+
+  function log(msg, type = "info") {
+    const d = new Date().toLocaleTimeString();
+    const div = document.createElement('div');
+    div.className = `log-item log-${type}`;
+    div.innerText = `[${d}] ${msg}`;
+    logContainer.prepend(div);
+  }
+
+  function showToast(title, body) {
+    toastTitle.innerText = "🔔 " + title;
+    toastBody.innerText = body;
+    toastBox.style.display = "block";
+    setTimeout(() => { toastBox.style.display = "none"; }, 5000);
+  }
+
+  // 1. LOGIN & REGISTER
+  btnLogin.addEventListener('click', async () => {
+    const email = document.getElementById('userEmail').value;
+    const appId = document.getElementById('appId').value;
+    const apiBase = document.getElementById('apiBase').value;
+    const vapidKey = document.getElementById('vapidKey').value.trim() || "BKS-M0OHaA2oVEaLPIJhckoM_090Sm5TD4lHnBsvGAP7af0OIFgvu-OinnYvz4AUpp4ByHLcLsR52E1mZ9bMsjc";
+
+    log(`Authenticating ${email}...`);
+
+    try {
+      // 1. Initialize Firebase Web SDK
+      const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+      const { getMessaging, getToken, onMessage } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js");
+      
+      const app = initializeApp(firebaseConfig);
+      const messaging = getMessaging(app);
+
+      // Register service worker if supported
+      let swReg = null;
+      if ('serviceWorker' in navigator) {
+        try {
+          swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+          log("Service Worker registered.", "info");
+        } catch (swErr) {
+          console.warn("SW register warning:", swErr);
+        }
+      }
+
+      // Request Notification Permission from Browser
+      log("Requesting browser notification permission...");
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') {
+        log(`Permission ${perm}. Please allow notifications in browser address bar.`, "warn");
+      }
+
+      // Acquire Real Google FCM Device Token
+      const tokenOptions = { vapidKey: vapidKey };
+      if (swReg) {
+        tokenOptions.serviceWorkerRegistration = swReg;
+      }
+      deviceToken = await getToken(messaging, tokenOptions);
+      log("✅ Real Google FCM Token acquired!", "success");
+
+      // Listen for incoming messages while in foreground
+      onMessage(messaging, (payload) => {
+        console.log("Foreground message received:", payload);
+        const hasNotification = !!payload.notification;
+        if (!hasNotification && payload.data && Object.keys(payload.data).length > 0) {
+          // Silent Data-Only Push
+          log(`🔕 [SILENT DATA PUSH] App woke up silently in background. Payload: ${JSON.stringify(payload.data)}`, "info");
+        } else {
+          // Visible Alert Push
+          const title = payload.notification?.title || payload.data?.title || "Notification";
+          const body = payload.notification?.body || payload.data?.body || "";
+          log(`🔔 [ALERT PUSH] ${title} - ${body}`, "success");
+          showToast(title, body);
+        }
+      });
+
+    } catch (err) {
+      log(`FCM Web Token Error: ${err.message}`, "warn");
+      log(`Tip: If VAPID key is required, generate it in Firebase Console > Project settings > Cloud Messaging > Web Push certificates and paste above.`, "info");
+      // Fallback mock token for smooth API testing if user hasn't generated VAPID key yet
+      deviceToken = "fcm_mock_" + Math.random().toString(36).substring(2, 12);
+      log(`Using test token for backend verification: ${deviceToken}`, "info");
+    }
+
+    tokenDisplay.innerText = deviceToken;
+    currentUserLabel.innerText = email;
+
+    // Send Register request to your C# ASP.NET Core API
+    try {
+      const response = await fetch(`${apiBase}/devices/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: email,
+          appId: appId,
+          deviceToken: deviceToken,
+          deviceType: "WebMobileClient"
+        })
+      });
+
+      if (response.ok) {
+        log(`✅ Device registered with backend API (${apiBase})!`, "success");
+      } else {
+        log(`Backend registration returned status: ${response.status}`, "warn");
+      }
+    } catch (e) {
+      log(`Could not reach backend API at ${apiBase}. Ensure 'dotnet run' is running!`, "warn");
+    }
+
+    // Update UI State
+    authSection.style.display = "none";
+    deviceControls.style.display = "block";
+    setPresenceOnline(true);
+    await sendHeartbeat();
+    startHeartbeatLoop();
+  });
+
+  // 2. PRESENCE HEARTBEAT LOOP
+  function startHeartbeatLoop() {
+    stopHeartbeatLoop();
+    nextHeartbeatSec = 45;
+
+    countdownInterval = setInterval(() => {
+      if (!isAppActive) {
+        heartbeatTimer.innerText = "Paused (Background)";
+        return;
+      }
+      nextHeartbeatSec--;
+      heartbeatTimer.innerText = `Heartbeat in: ${nextHeartbeatSec}s`;
+      if (nextHeartbeatSec <= 0) {
+        sendHeartbeat();
+        nextHeartbeatSec = 45;
+      }
+    }, 1000);
+  }
+
+  function stopHeartbeatLoop() {
+    if (countdownInterval) clearInterval(countdownInterval);
+  }
+
+  async function sendHeartbeat() {
+    const email = document.getElementById('userEmail').value;
+    const apiBase = document.getElementById('apiBase').value;
+    try {
+      await fetch(`${apiBase}/presence/heartbeat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: email, deviceId: deviceToken })
+      });
+      log(`💓 Heartbeat sent (Sliding TTL extended by 90s)`, "info");
+    } catch (e) {
+      log(`Failed to send heartbeat to backend API.`, "warn");
+    }
+  }
+
+  // 3. TOGGLE ACTIVE / BACKGROUND
+  btnToggleApp.addEventListener('click', () => {
+    isAppActive = !isAppActive;
+    if (isAppActive) {
+      btnToggleApp.innerText = "⏸️ Minimize App";
+      setPresenceOnline(true);
+      log("App brought to Foreground. Heartbeats resumed.", "info");
+      sendHeartbeat();
+    } else {
+      btnToggleApp.innerText = "▶️ Open App";
+      presenceBadge.className = "badge badge-offline";
+      presenceBadge.innerText = "BACKGROUND";
+      log("App minimized to background. Heartbeats stopped.", "warn");
+    }
+  });
+
+  // 4. LOGOUT & DEACTIVATE
+  btnLogout.addEventListener('click', async () => {
+    const email = document.getElementById('userEmail').value;
+    const apiBase = document.getElementById('apiBase').value;
+
+    log(`Logging out...`);
+    try {
+      await fetch(`${apiBase}/devices/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: email, deviceToken: deviceToken })
+      });
+      log(`Device token deactivated and presence purged from backend.`, "success");
+    } catch (e) {
+      log(`Backend logout request failed.`, "warn");
+    }
+
+    stopHeartbeatLoop();
+    setPresenceOnline(false);
+    authSection.style.display = "block";
+    deviceControls.style.display = "none";
+  });
+
+  function setPresenceOnline(online) {
+    if (online) {
+      presenceBadge.className = "badge badge-online";
+      presenceBadge.innerText = "ONLINE (ACTIVE)";
+    } else {
+      presenceBadge.className = "badge badge-offline";
+      presenceBadge.innerText = "OFFLINE";
+    }
+  }
+</script>
+
+</body>
+</html>

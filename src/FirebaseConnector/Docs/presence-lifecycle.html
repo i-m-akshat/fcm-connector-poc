@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Presence & Sliding TTL — Firebase Push Connector</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Navigation Sidebar -->
+  <nav id="sidebar">
+    <a href="index.html" class="brand-title">
+      <span>🚀 Firebase Connector</span>
+      <span class="brand-badge">.NET 8</span>
+    </a>
+
+    <div class="nav-section">
+      <div class="nav-header">Documentation Hub</div>
+      <a class="nav-link" href="index.html">← Back to Overview</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Architecture Decision Records</div>
+      <a class="nav-link" href="ADR/index.html">ADR Index & Logs</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Technical Manuals</div>
+      <a class="nav-link" href="architecture.html">System Architecture</a>
+      <a class="nav-link active" href="presence-lifecycle.html">Presence & Heartbeat</a>
+      <a class="nav-link" href="ios-integration.html">Apple iOS & APNs (.p8)</a>
+      <a class="nav-link" href="notification-types.html">Notification Types & Payloads</a>
+      <a class="nav-link" href="mobile-clients.html">Mobile Client SDKs</a>
+      <a class="nav-link" href="deployment.html">Podman & Docker Deployment</a>
+    </div>
+  </nav>
+
+  <main id="content">
+    <header class="doc-header">
+      <h1>💓 Presence & Sliding TTL Lifecycle</h1>
+      <p class="lead">How real-time heartbeats and Redis sliding expiration eliminate phantom notifications to inactive devices.</p>
+    </header>
+
+    <h2>1. The Problem: Phantom Notifications</h2>
+    <p>In high-throughput logistics, ride-hailing, and dispatch applications:</p>
+    <ul>
+      <li>Drivers lock their screens, step away from vehicles, or lose cellular connectivity.</li>
+      <li>If the backend sends high-frequency ride offers to an offline driver, the customer waits for an offer that will never be accepted.</li>
+      <li>Battery life on mobile phones degrades rapidly from unnecessary radio wakeups.</li>
+    </ul>
+
+    <h2>2. The Solution: 45s Heartbeat & 90s Sliding TTL</h2>
+    <div class="callout callout-info">
+      <div class="callout-title">The 2:1 Safety Ratio</div>
+      <p>Mobile clients ping every <strong>45 seconds</strong> while the app is in the foreground. Each ping resets the Redis expiration to <strong>90 seconds</strong>. This gives mobile devices a 2x safety window to survive minor cellular network dropouts without being marked offline prematurely.</p>
+    </div>
+
+    <!-- Timeline SVG -->
+    <div style="background: #020617; border: 1px solid var(--surface-border); border-radius: 12px; padding: 24px; margin: 24px 0;">
+      <svg viewBox="0 0 850 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg">
+        <rect width="850" height="240" rx="10" fill="#020617"/>
+        <line x1="80" y1="110" x2="770" y2="110" stroke="#334155" stroke-width="4"/>
+
+        <!-- T = 0s -->
+        <circle cx="120" cy="110" r="10" fill="#22c55e"/>
+        <text x="120" y="85" fill="#22c55e" font-size="12" font-weight="700" text-anchor="middle">T = 0s</text>
+        <text x="120" y="140" fill="#fff" font-size="10" font-weight="600" text-anchor="middle">Login / Register</text>
+        <text x="120" y="155" fill="#94a3b8" font-size="9" text-anchor="middle">Active TTL = 90s</text>
+
+        <!-- T = 45s -->
+        <circle cx="320" cy="110" r="10" fill="#38bdf8"/>
+        <text x="320" y="85" fill="#38bdf8" font-size="12" font-weight="700" text-anchor="middle">T = 45s</text>
+        <text x="320" y="140" fill="#fff" font-size="10" font-weight="600" text-anchor="middle">Heartbeat #1</text>
+        <text x="320" y="155" fill="#94a3b8" font-size="9" text-anchor="middle">TTL renewed to 90s</text>
+
+        <!-- T = 90s -->
+        <circle cx="520" cy="110" r="10" fill="#38bdf8"/>
+        <text x="520" y="85" fill="#38bdf8" font-size="12" font-weight="700" text-anchor="middle">T = 90s</text>
+        <text x="520" y="140" fill="#fff" font-size="10" font-weight="600" text-anchor="middle">Heartbeat #2</text>
+        <text x="520" y="155" fill="#94a3b8" font-size="9" text-anchor="middle">TTL renewed to 90s</text>
+
+        <!-- T = 180s -->
+        <circle cx="720" cy="110" r="10" fill="#ef4444"/>
+        <text x="720" y="85" fill="#ef4444" font-size="12" font-weight="700" text-anchor="middle">T = 180s</text>
+        <text x="720" y="140" fill="#ef4444" font-size="10" font-weight="600" text-anchor="middle">Expired (Offline)</text>
+        <text x="720" y="155" fill="#94a3b8" font-size="9" text-anchor="middle">Dispatches skipped</text>
+      </svg>
+    </div>
+
+    <h2>3. Presence API Endpoints</h2>
+
+    <h3>1. Send Heartbeat (Extends Sliding Window)</h3>
+    <pre><code>POST /api/presence/heartbeat
+{
+  "userId": "driver_alex@company.com",
+  "deviceId": "eF91k...raw_device_token..."
+}
+
+// Response:
+{
+  "status": "PresenceExtended",
+  "ttlSeconds": 90
+}</code></pre>
+
+    <h3>2. Mark Inactive (App Minimized / Backgrounded)</h3>
+    <pre><code>POST /api/presence/inactive
+{
+  "userId": "driver_alex@company.com",
+  "deviceId": "eF91k...raw_device_token..."
+}</code></pre>
+
+    <h3>3. Check User Presence Status</h3>
+    <pre><code>GET /api/presence/driver_alex@company.com
+
+// Response:
+{
+  "userId": "driver_alex@company.com",
+  "isActive": true,
+  "activeDevices": [ "eF91k..." ]
+}</code></pre>
+
+    <h2>4. How the Dispatch Router Uses Presence</h2>
+    <p>When sending a notification via <code>POST /api/notifications/send</code>:</p>
+    <ul>
+      <li>If <code>"onlyIfActive": true</code> is set, the router checks Redis. If the user has no active devices with valid TTL, dispatch terminates immediately with:
+        <pre><code>{
+  "success": false,
+  "reason": "UserInactive",
+  "deliveredCount": 0
+}</code></pre>
+      </li>
+      <li>If <code>"onlyIfActive": false</code> is set, presence check is bypassed and the message is delivered to all registered devices regardless of presence state.</li>
+    </ul>
+  </main>
+</body>
+</html>

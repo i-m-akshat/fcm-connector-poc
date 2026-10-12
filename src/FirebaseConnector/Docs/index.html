@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enterprise Firebase Push Connector — Documentation Hub</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Navigation Sidebar -->
+  <nav id="sidebar">
+    <a href="index.html" class="brand-title">
+      <span>🚀 Firebase Connector</span>
+      <span class="brand-badge">.NET 8</span>
+    </a>
+
+    <div class="nav-section">
+      <div class="nav-header">Documentation Hub</div>
+      <a class="nav-link active" href="index.html">Overview & Portal</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Step-by-Step Manuals</div>
+      <a class="nav-link" href="Manual/index.html">Manuals Library</a>
+      <a class="nav-link" href="Manual/step-by-step-setup-guide.html">1. Setup & Verification</a>
+      <a class="nav-link" href="Manual/mobile-apps-integration-guide.html">2. Mobile Apps & Multi-Project</a>
+      <a class="nav-link" href="Manual/event-driven-mobile-architecture.html">3. Real-Time Event Architecture</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Architecture Decision Records</div>
+      <a class="nav-link" href="ADR/index.html">ADR Index & Logs (001–006)</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">System Specifications</div>
+      <a class="nav-link" href="architecture.html">System Architecture</a>
+      <a class="nav-link" href="presence-lifecycle.html">Presence & Heartbeat</a>
+      <a class="nav-link" href="ios-integration.html">Apple iOS & APNs (.p8)</a>
+      <a class="nav-link" href="notification-types.html">Notification Types & Payloads</a>
+      <a class="nav-link" href="mobile-clients.html">Mobile Client SDKs</a>
+      <a class="nav-link" href="deployment.html">Podman & Docker Deployment</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main id="content">
+    <header class="doc-header">
+      <h1>Documentation Hub</h1>
+      <p class="lead">Modular enterprise reference manuals and Architecture Decision Records (ADRs) for the Firebase Cloud Messaging (FCM) Connector.</p>
+    </header>
+
+    <div class="callout callout-success">
+      <div class="callout-title">Modular Enterprise Documentation Suite</div>
+      <p>Each topic is split into a dedicated, focused manual so that backend engineers, mobile developers (iOS/Android/Flutter), DevOps, and QA teams can bookmark and read exactly what they need.</p>
+    </div>
+
+    <h2>📖 Step-by-Step Engineering Manuals</h2>
+    <div class="card-grid">
+
+      <a href="Manual/step-by-step-setup-guide.html" class="card">
+        <span class="badge badge-primary">Manual 01</span>
+        <h3>🛠️ Setup & Verification Manual</h3>
+        <p>Button-by-button guide: Firebase Console, Service Account key generation, Docker/Podman run, simulator testing.</p>
+        <span class="badge badge-success">Open Manual →</span>
+      </a>
+
+      <a href="Manual/mobile-apps-integration-guide.html" class="card">
+        <span class="badge badge-primary">Manual 02</span>
+        <h3>📱 Mobile Apps Integration Manual</h3>
+        <p>Connect existing iOS, Android, Flutter, and React Native apps, configure Apple .p8 keys, and route multi-tenant apps.</p>
+        <span class="badge badge-success">Open Manual →</span>
+      </a>
+
+      <a href="Manual/event-driven-mobile-architecture.html" class="card">
+        <span class="badge badge-primary">Manual 03</span>
+        <h3>⚡ Real-Time Event Architecture</h3>
+        <p>How mobile apps trigger events via REST, consume via message brokers, and handle foreground Event Emitters vs background wakeup.</p>
+        <span class="badge badge-success">Open Manual →</span>
+      </a>
+
+    </div>
+
+    <h2 style="margin-top: 48px;">📐 Technical Architecture & Payloads</h2>
+    <div class="card-grid">
+
+      <a href="architecture.html" class="card">
+        <h3>🏛️ System Architecture</h3>
+        <p>End-to-end topology diagram, Ingress tier, Kestrel API, Redis cluster, and FCM HTTP v1 gateway.</p>
+        <span class="badge badge-primary">Read Architecture →</span>
+      </a>
+
+      <a href="presence-lifecycle.html" class="card">
+        <h3>💓 Presence & Sliding TTL</h3>
+        <p>Deep-dive into the 45-second heartbeat, Redis 90-second sliding expiration, and battery-saving dispatch filters.</p>
+        <span class="badge badge-primary">Read Presence Manual →</span>
+      </a>
+
+      <a href="ios-integration.html" class="card">
+        <h3>🍎 Apple iOS & APNs (.p8)</h3>
+        <p>How iOS works with FCM, the Master APNs key vs device token concept, and Xcode background capabilities.</p>
+        <span class="badge badge-primary">Read iOS Guide →</span>
+      </a>
+
+      <a href="notification-types.html" class="card">
+        <h3>📬 Notification Types & Payloads</h3>
+        <p>Visual Alert, Silent background sync, Rich Media images, Action buttons, Collapsible ETA updates, and Topics.</p>
+        <span class="badge badge-primary">Read Payload Specs →</span>
+      </a>
+
+      <a href="mobile-clients.html" class="card">
+        <h3>📱 Mobile Client Integration</h3>
+        <p>Plug-and-play code snippets for Swift (iOS), Kotlin (Android), Flutter (Dart), and React Native.</p>
+        <span class="badge badge-primary">Read Client Code →</span>
+      </a>
+
+      <a href="deployment.html" class="card">
+        <h3>🐳 Container & Cloud Ops</h3>
+        <p>Running with Podman Compose, Docker Compose, <code>.env</code> multi-app secret injection, and Kubernetes deployment.</p>
+        <span class="badge badge-primary">Read Ops Manual →</span>
+      </a>
+
+    </div>
+
+    <h2>🏛️ Architecture Decision Records (ADR)</h2>
+    <p>Formal records of high-impact engineering decisions, architectural trade-offs, and compliance constraints:</p>
+
+    <div class="card-grid">
+
+      <a href="ADR/ADR-001-fcm-http-v1.html" class="card">
+        <h4>ADR-001: FCM HTTP v1 Migration</h4>
+        <p>Adoption of modern OAuth2 Service Accounts and sunsetting deprecated Legacy FCM server keys.</p>
+        <span class="badge badge-success">Approved</span>
+      </a>
+
+      <a href="ADR/ADR-002-sliding-presence.html" class="card">
+        <h4>ADR-002: Redis Sliding TTL Presence</h4>
+        <p>45-second client heartbeat maintaining a 90-second sliding TTL in Redis with in-memory fallback.</p>
+        <span class="badge badge-success">Approved</span>
+      </a>
+
+      <a href="ADR/ADR-003-multi-tenant-routing.html" class="card">
+        <h4>ADR-003: Multi-Tenant Named FirebaseApp</h4>
+        <p>Dynamic routing across separate Firebase projects based on <code>appId</code> and environment secrets.</p>
+        <span class="badge badge-success">Approved</span>
+      </a>
+
+      <a href="ADR/ADR-004-zero-secrets-in-code.html" class="card">
+        <h4>ADR-004: Zero Secrets in Code</h4>
+        <p>Strict exclusion of secrets from Git and appsettings; injection via <code>.env</code> and cloud secret managers.</p>
+        <span class="badge badge-success">Approved</span>
+      </a>
+
+      <a href="ADR/ADR-005-unified-payload.html" class="card">
+        <h4>ADR-005: Unified Multi-Type Payload</h4>
+        <p>A single flexible API contract for Alert, Silent, Rich Media, Collapsible, and Topic broadcasts.</p>
+        <span class="badge badge-success">Approved</span>
+      </a>
+
+      <a href="ADR/ADR-006-multi-app-targeting-and-broadcasting.html" class="card">
+        <h4>ADR-006: Multi-App Token Isolation & Broadcast</h4>
+        <p>Cryptographic token isolation per app ID and Pub/Sub topic broadcasting to App A without affecting App B.</p>
+        <span class="badge badge-success">Approved</span>
+      </a>
+
+    </div>
+
+  </main>
+</body>
+</html>

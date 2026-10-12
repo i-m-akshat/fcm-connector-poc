@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADR-003: Multi-Tenant Routing — Firebase Push Connector</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+  <!-- Navigation Sidebar -->
+  <nav id="sidebar">
+    <a href="../index.html" class="brand-title">
+      <span>🚀 Firebase Connector</span>
+      <span class="brand-badge">.NET 8</span>
+    </a>
+
+    <div class="nav-section">
+      <div class="nav-header">Documentation Hub</div>
+      <a class="nav-link" href="../index.html">← Back to Overview</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Architecture Decision Records</div>
+      <a class="nav-link" href="index.html">← ADR Index & Logs</a>
+      <a class="nav-link" href="ADR-001-fcm-http-v1.html">ADR-001: FCM HTTP v1</a>
+      <a class="nav-link" href="ADR-002-sliding-presence.html">ADR-002: Sliding Presence</a>
+      <a class="nav-link active" href="ADR-003-multi-tenant-routing.html">ADR-003: Multi-Tenant</a>
+      <a class="nav-link" href="ADR-004-zero-secrets-in-code.html">ADR-004: Zero Secrets</a>
+      <a class="nav-link" href="ADR-005-unified-payload.html">ADR-005: Unified Contract</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Technical Manuals</div>
+      <a class="nav-link" href="../architecture.html">System Architecture</a>
+      <a class="nav-link" href="../presence-lifecycle.html">Presence & Heartbeat</a>
+      <a class="nav-link" href="../ios-integration.html">Apple iOS & APNs (.p8)</a>
+      <a class="nav-link" href="../notification-types.html">Notification Types & Payloads</a>
+      <a class="nav-link" href="../mobile-clients.html">Mobile Client SDKs</a>
+      <a class="nav-link" href="../deployment.html">Podman & Docker Deployment</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main id="content">
+    <header class="doc-header">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+        <span class="badge badge-success">ADR-003</span>
+        <span class="badge badge-primary">Approved</span>
+      </div>
+      <h1>Multi-Tenant Routing via Named FirebaseApp Instances</h1>
+      <p class="lead">Consolidating multiple independent mobile apps and separate Firebase projects into a single high-throughput routing cluster.</p>
+    </header>
+
+    <h2>1. Context & Problem Statement</h2>
+    <p>Organizations typically manage a suite of related mobile applications:</p>
+    <ul>
+      <li><strong>Customer App:</strong> e.g., Firebase Project <code>acme-customer-prod</code></li>
+      <li><strong>Driver / Courier App:</strong> e.g., Firebase Project <code>acme-driver-prod</code></li>
+      <li><strong>Merchant / Partner App:</strong> e.g., Firebase Project <code>acme-merchant-prod</code></li>
+    </ul>
+    <p>Running isolated push microservices for every mobile app introduces significant infrastructure redundancy, increases cloud hosting bills, and creates multiple Redis and API silos.</p>
+
+    <h2>2. Decision Drivers</h2>
+    <ul>
+      <li>Single unified gateway API for all internal backend services.</li>
+      <li>Zero code changes required when provisioning a new mobile app project.</li>
+      <li>Cross-tenant isolation: tokens belonging to one app must never be sent to the Firebase project of another.</li>
+      <li>Support for users registered on multiple apps simultaneously (e.g. an employee who is both a customer and a courier).</li>
+    </ul>
+
+    <h2>3. Decision Outcome</h2>
+    <p><strong>Approved Decision:</strong> Implement dynamic multi-tenant routing using Google's named <code>FirebaseApp</code> instances loaded from standardized environment variables:</p>
+    <ul>
+      <li>At startup, <code>FirebaseAppManager</code> inspects environment variables for the pattern: <code>FIREBASE_APP_&lt;APP_NAME&gt;_JSON</code>.</li>
+      <li>For each detected variable, the manager deserializes the Google Service Account and invokes <code>FirebaseApp.Create(options, appName)</code>.</li>
+      <li>When client apps register their tokens via <code>POST /api/devices/register</code>, they include their <code>appId</code> (e.g. <code>"appId": "DriverApp"</code>).</li>
+      <li>During notification dispatch to a user, the <code>NotificationDeliveryRouter</code> groups the target's devices by <code>AppId</code> and sends batches concurrently to each respective <code>FirebaseApp</code> instance.</li>
+    </ul>
+
+    <h2>4. Architecture Blueprint</h2>
+    <div class="code-block">
+      <div class="code-header"><span>Services/NotificationDeliveryRouter.cs</span><span>C#</span></div>
+      <pre><code>// Group user's registered devices by their assigned application
+var devicesByApp = activeDevices.GroupBy(d => d.AppId ?? "FCMPOC");
+
+foreach (var appGroup in devicesByApp)
+{
+    var appName = appGroup.Key;
+    var appInstance = _firebaseAppManager.GetApp(appName);
+    var tokens = appGroup.Select(d => d.DeviceToken).ToList();
+
+    var multicastMsg = new MulticastMessage
+    {
+        Tokens = tokens,
+        Notification = ...
+    };
+
+    var response = await FirebaseMessaging.GetMessaging(appInstance)
+                                          .SendMulticastAsync(multicastMsg);
+}</code></pre>
+    </div>
+
+    <h2>5. Consequences</h2>
+    <div class="callout callout-success">
+      <div class="callout-title">Positive Impact</div>
+      <ul>
+        <li><strong>Infrastructure Consolidation:</strong> 1 container cluster serves all 5+ corporate mobile applications.</li>
+        <li><strong>Zero Code Deployment:</strong> Adding an existing app requires only adding one line to <code>.env</code> and rebooting the container.</li>
+        <li><strong>Clean Separation:</strong> Firebase project quotas, audit logs, and IAM permissions remain strictly isolated per app.</li>
+      </ul>
+    </div>
+
+  </main>
+</body>
+</html>

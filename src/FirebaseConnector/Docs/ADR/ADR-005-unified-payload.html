@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADR-005: Unified Multi-Type Payload — Firebase Push Connector</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+  <!-- Navigation Sidebar -->
+  <nav id="sidebar">
+    <a href="../index.html" class="brand-title">
+      <span>🚀 Firebase Connector</span>
+      <span class="brand-badge">.NET 8</span>
+    </a>
+
+    <div class="nav-section">
+      <div class="nav-header">Documentation Hub</div>
+      <a class="nav-link" href="../index.html">← Back to Overview</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Architecture Decision Records</div>
+      <a class="nav-link" href="index.html">← ADR Index & Logs</a>
+      <a class="nav-link" href="ADR-001-fcm-http-v1.html">ADR-001: FCM HTTP v1</a>
+      <a class="nav-link" href="ADR-002-sliding-presence.html">ADR-002: Sliding Presence</a>
+      <a class="nav-link" href="ADR-003-multi-tenant-routing.html">ADR-003: Multi-Tenant</a>
+      <a class="nav-link" href="ADR-004-zero-secrets-in-code.html">ADR-004: Zero Secrets</a>
+      <a class="nav-link active" href="ADR-005-unified-payload.html">ADR-005: Unified Contract</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Technical Manuals</div>
+      <a class="nav-link" href="../architecture.html">System Architecture</a>
+      <a class="nav-link" href="../presence-lifecycle.html">Presence & Heartbeat</a>
+      <a class="nav-link" href="../ios-integration.html">Apple iOS & APNs (.p8)</a>
+      <a class="nav-link" href="../notification-types.html">Notification Types & Payloads</a>
+      <a class="nav-link" href="../mobile-clients.html">Mobile Client SDKs</a>
+      <a class="nav-link" href="../deployment.html">Podman & Docker Deployment</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main id="content">
+    <header class="doc-header">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+        <span class="badge badge-success">ADR-005</span>
+        <span class="badge badge-primary">Approved</span>
+      </div>
+      <h1>Unified Multi-Type Notification Payload Contract</h1>
+      <p class="lead">Eliminating fragmented push endpoints in favor of a single composable contract supporting Alert, Silent, Rich Media, Actionable, Collapsible, and Topic delivery.</p>
+    </header>
+
+    <h2>1. Context & Problem Statement</h2>
+    <p>Many push notification gateways split delivery logic across several disparate endpoints (e.g. <code>/api/push/alert</code>, <code>/api/push/silent</code>, <code>/api/push/topic</code>). This approach introduces several major architectural drawbacks:</p>
+    <ul>
+      <li><strong>API Fragmentation:</strong> Upstream developers must maintain separate client bindings and choose between rigid, siloed endpoints.</li>
+      <li><strong>Lack of Composability:</strong> Real-world scenarios often require combining multiple features (e.g. an Alert notification that also has an Image, custom Data dictionary, and a Collapse Key to prevent tray clutter). Fragmented endpoints cannot handle this without creating combinatoric endpoint explosions.</li>
+      <li><strong>Code Duplication:</strong> Validation, presence checking, and token registry lookups get duplicated across controller actions.</li>
+    </ul>
+
+    <h2>2. Decision Drivers</h2>
+    <ul>
+      <li>Single unified entry point for all internal backend services: <code>POST /api/notifications/send</code>.</li>
+      <li>Full composability of delivery attributes (Silent, Rich Image, Action Category, Live ETA collapse key, Priority).</li>
+      <li>Polymorphic target resolution (supports <code>UserId</code>, <code>DeviceToken</code>, <code>Topic</code>, or <code>Condition</code> in the same request model).</li>
+      <li>Automatic platform compilation: The gateway compiles the single request into Apple APNs HTTP/2 headers and Android Channels automatically.</li>
+    </ul>
+
+    <h2>3. Decision Outcome</h2>
+    <p><strong>Approved Decision:</strong> Establish <code>NotificationRequest</code> as the single canonical API contract for all push delivery. The <code>NotificationDeliveryRouter</code> compiles properties into platform-specific native structures at runtime:</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>Models/Contracts.cs — Unified Contract</span><span>C#</span></div>
+      <pre><code>public class NotificationRequest
+{
+    // Targets (at least one required)
+    public string? UserId { get; set; }
+    public string? DeviceToken { get; set; }
+    public string? Topic { get; set; }
+    public string? Condition { get; set; }
+
+    // Multi-tenant override (optional)
+    public string? AppId { get; set; }
+
+    // Content
+    public string? Title { get; set; }
+    public string? Body { get; set; }
+    public string? ImageUrl { get; set; }
+    public Dictionary&lt;string, string&gt;? Data { get; set; }
+
+    // Delivery Behaviors
+    public bool IsSilent { get; set; }
+    public bool OnlyIfActive { get; set; }
+    public string? CollapseKey { get; set; }
+    public string? ActionCategory { get; set; }
+    public NotificationPriority Priority { get; set; } = NotificationPriority.Normal;
+}</code></pre>
+    </div>
+
+    <h2>4. Platform Header Compilation Logic</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Contract Field</th>
+          <th>Android FCM Output</th>
+          <th>Apple APNs Output</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>IsSilent = true</code></td>
+          <td>Omits <code>Notification</code> block; delivers pure <code>data</code> map.</td>
+          <td>Sets <code>apns-push-type: background</code> and <code>content-available: 1</code>.</td>
+        </tr>
+        <tr>
+          <td><code>ImageUrl = "https://..."</code></td>
+          <td>Embeds <code>Image</code> in <code>AndroidNotification</code> (BigPicture).</td>
+          <td>Sets <code>fcm_options.image</code> for APNs rich attachment.</td>
+        </tr>
+        <tr>
+          <td><code>CollapseKey = "ETA_102"</code></td>
+          <td>Sets <code>CollapseKey = "ETA_102"</code>.</td>
+          <td>Sets <code>apns-collapse-id: "ETA_102"</code> in APNs headers.</td>
+        </tr>
+        <tr>
+          <td><code>Priority = Critical</code></td>
+          <td>Sets <code>Priority = High</code>, channel <code>critical_channel</code>.</td>
+          <td>Sets <code>apns-priority: 10</code>, <code>interruption-level: time-sensitive</code>.</td>
+        </tr>
+        <tr>
+          <td><code>ActionCategory = "RIDE"</code></td>
+          <td>Sets <code>ClickAction = "RIDE"</code>.</td>
+          <td>Sets <code>category: "RIDE"</code> in APNs payload.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>5. Consequences</h2>
+    <div class="callout callout-success">
+      <div class="callout-title">Positive Impact</div>
+      <ul>
+        <li><strong>Developer Simplicity:</strong> Upstream microservices only ever need to integrate with 1 HTTP endpoint.</li>
+        <li><strong>Maximum Flexibility:</strong> Any combination of notification features can be enabled simultaneously.</li>
+        <li><strong>Client Agnostic:</strong> The caller does not need to know whether the user has an iPhone, an Android phone, or both.</li>
+      </ul>
+    </div>
+
+  </main>
+</body>
+</html>

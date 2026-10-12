@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADR-001: Migration to FCM HTTP v1 Protocol — Firebase Push Connector</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+  <!-- Navigation Sidebar -->
+  <nav id="sidebar">
+    <a href="../index.html" class="brand-title">
+      <span>🚀 Firebase Connector</span>
+      <span class="brand-badge">.NET 8</span>
+    </a>
+
+    <div class="nav-section">
+      <div class="nav-header">Documentation Hub</div>
+      <a class="nav-link" href="../index.html">← Back to Overview</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Architecture Decision Records</div>
+      <a class="nav-link" href="index.html">← ADR Index & Logs</a>
+      <a class="nav-link active" href="ADR-001-fcm-http-v1.html">ADR-001: FCM HTTP v1</a>
+      <a class="nav-link" href="ADR-002-sliding-presence.html">ADR-002: Sliding Presence</a>
+      <a class="nav-link" href="ADR-003-multi-tenant-routing.html">ADR-003: Multi-Tenant</a>
+      <a class="nav-link" href="ADR-004-zero-secrets-in-code.html">ADR-004: Zero Secrets</a>
+      <a class="nav-link" href="ADR-005-unified-payload.html">ADR-005: Unified Contract</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-header">Technical Manuals</div>
+      <a class="nav-link" href="../architecture.html">System Architecture</a>
+      <a class="nav-link" href="../presence-lifecycle.html">Presence & Heartbeat</a>
+      <a class="nav-link" href="../ios-integration.html">Apple iOS & APNs (.p8)</a>
+      <a class="nav-link" href="../notification-types.html">Notification Types & Payloads</a>
+      <a class="nav-link" href="../mobile-clients.html">Mobile Client SDKs</a>
+      <a class="nav-link" href="../deployment.html">Podman & Docker Deployment</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main id="content">
+    <header class="doc-header">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+        <span class="badge badge-success">ADR-001</span>
+        <span class="badge badge-primary">Approved</span>
+      </div>
+      <h1>Migration to FCM HTTP v1 Protocol & Admin SDK</h1>
+      <p class="lead">Formal decision record superseding deprecated Legacy FCM server keys with modern OAuth 2.0 Service Account authentication.</p>
+    </header>
+
+    <h2>1. Context & Problem Statement</h2>
+    <p>Google Cloud officially deprecated the Legacy Firebase Cloud Messaging HTTP protocol (<code>https://fcm.googleapis.com/fcm/send</code>) and XMPP server endpoints. Legacy FCM relied on static <code>Authorization: key=AAAA...</code> server keys that presented significant architectural and compliance liabilities:</p>
+    <ul>
+      <li><strong>Excessive Scope:</strong> Static server keys granted irreversible administrative access across the entire Firebase project.</li>
+      <li><strong>Credential Leak Risk:</strong> A compromised server key could not easily be revoked without impacting all dependent microservices.</li>
+      <li><strong>Lack of Modern Platform Features:</strong> Legacy payloads could not customize Apple APNs HTTP/2 headers (such as <code>apns-push-type</code> or <code>apns-collapse-id</code>) or Android notification channels directly.</li>
+    </ul>
+
+    <h2>2. Decision Drivers</h2>
+    <ul>
+      <li>Compliance with Google Cloud deprecation schedules.</li>
+      <li>Enterprise security requirement for short-lived, auto-rotating OAuth 2.0 bearer tokens.</li>
+      <li>Need for granular control over Apple APNs headers, Android notification channels, and Web Push options.</li>
+      <li>High-throughput batch delivery support (up to 500 tokens per multicast operation).</li>
+    </ul>
+
+    <h2>3. Considered Options</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Option</th>
+          <th>Pros</th>
+          <th>Cons</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Option A: Raw REST Client for FCM HTTP v1</strong></td>
+          <td>Zero external NuGet dependencies.</td>
+          <td>Requires manually managing Google OAuth2 refresh tokens, JWT signing, and retry backoff.</td>
+        </tr>
+        <tr>
+          <td><strong>Option B: Official FirebaseAdmin .NET SDK (Selected)</strong></td>
+          <td>Google-maintained, automatic token caching and renewal, native batching APIs, strongly-typed contracts.</td>
+          <td>Adds dependency on <code>FirebaseAdmin</code> and <code>Google.Apis.Auth</code>.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>4. Decision Outcome</h2>
+    <p><strong>Chosen Option: Option B.</strong> Adopt the official <code>FirebaseAdmin</code> .NET SDK (version 3.1.0) communicating over the FCM HTTP v1 protocol.</p>
+    <p>All push dispatches are authenticated using Google Service Account credentials with automated in-memory token refreshes handled by the SDK.</p>
+
+    <h2>5. Implementation Details</h2>
+    <p>The connector initializes named Firebase applications via <code>FirebaseAppManager</code>:</p>
+    <div class="code-block">
+      <div class="code-header"><span>Services/FirebaseAppManager.cs</span><span>C#</span></div>
+      <pre><code>var options = new AppOptions
+{
+    Credential = GoogleCredential.FromJson(serviceAccountJson)
+};
+var app = FirebaseApp.Create(options, appName);</code></pre>
+    </div>
+    <p>Delivery is executed via <code>FirebaseMessaging.GetMessaging(app).SendMulticastAsync(message)</code> or <code>SendAsync(message)</code>.</p>
+
+    <h2>6. Consequences</h2>
+    <div class="callout callout-success">
+      <div class="callout-title">Positive Consequences</div>
+      <ul>
+        <li>Full support for modern Apple iOS 16+ features (Focus bypass, collapse IDs, background data fetches).</li>
+        <li>Eliminates persistent static server keys. OAuth2 tokens rotate automatically every 60 minutes.</li>
+        <li>Multicast responses provide per-token error diagnostics (e.g. distinguishing <code>Unregistered</code> from <code>InvalidArgument</code>).</li>
+      </ul>
+    </div>
+    <div class="callout callout-warning">
+      <div class="callout-title">Trade-offs & Mitigations</div>
+      <ul>
+        <li>Service Account JSON files must be secured: Mitigated by injecting credentials via environment variables at container boot (see <a href="ADR-004-zero-secrets-in-code.html" style="color: var(--primary);">ADR-004</a>).</li>
+      </ul>
+    </div>
+
+  </main>
+</body>
+</html>
