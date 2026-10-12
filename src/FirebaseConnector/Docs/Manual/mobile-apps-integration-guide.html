@@ -101,24 +101,149 @@
       </svg>
     </div>
 
-    <!-- SECTION 2: APPLE DEVELOPER SETUP -->
-    <h2>2. Apple Developer & Firebase Setup (The .p8 Master Key)</h2>
-    
-    <div class="callout callout-warning">
-      <div class="callout-title">Key Principle: Is the APNs Key different for each device?</div>
-      <p><strong>NO!</strong> The APNs Key (<code>AuthKey_XXXXX.p8</code>) is <strong>ONE single master passkey</strong> for your entire company / Apple Developer Account. You generate it once in Apple Developer Portal and upload it once to Firebase Console. It never expires, and it never touches user devices.</p>
-    </div>
+    <!-- SECTION 2: THE FOOLPROOF SETUP GUIDE (ANDROID & IOS) -->
+    <h2>2. Foolproof Mobile Setup Guide (If your Mobile Dev is Junior or You're doing it Yourself)</h2>
+    <p>Follow these exact click-by-click steps to configure both Android and iOS from scratch without guessing.</p>
 
-    <h3>Step-by-Step Apple Configuration:</h3>
+    <!-- Part A: Android -->
+    <h3 style="color: #10b981; margin-top: 24px;">🤖 Part A: Android Setup (Android Studio & Gradle)</h3>
     <ol>
-      <li>Log in to <a href="https://developer.apple.com/account" target="_blank" style="color: var(--primary);">developer.apple.com/account</a>.</li>
-      <li>Go to <strong>Certificates, Identifiers & Profiles</strong> > <strong>Keys</strong>.</li>
-      <li>Click the <strong>`+`</strong> button, name the key <code>FCM APNs Key</code>, and check <strong>Apple Push Notifications service (APNs)</strong>.</li>
-      <li>Click <strong>Register</strong> and download the <code>AuthKey_XXXXXXXXXX.p8</code> file. Save it safely (Apple only lets you download it once!).</li>
-      <li>Copy your 10-character <strong>Key ID</strong> and 10-character <strong>Team ID</strong>.</li>
-      <li>Open <a href="https://console.firebase.google.com" target="_blank" style="color: var(--primary);">Firebase Console</a> > Project Settings > <strong>Cloud Messaging</strong> tab.</li>
-      <li>Under <strong>Apple app configuration</strong>, click <strong>Upload</strong> under APNs Authentication Key and upload your <code>.p8</code> file with Key ID and Team ID.</li>
+      <li><strong>Register App in Firebase Console:</strong>
+        <ul>
+          <li>Open Firebase Console > Project settings (⚙️) > <strong>General</strong> tab > scroll down to <strong>Your apps</strong>.</li>
+          <li>Click the <strong>Android icon</strong>.</li>
+          <li>Enter your Android package name (find this in your <code>android/app/build.gradle</code> under <code>defaultConfig { applicationId "com.yourcompany.app" }</code>).</li>
+          <li>Click <strong>Register app</strong>.</li>
+        </ul>
+      </li>
+      <li><strong>Download & Place <code>google-services.json</code>:</strong>
+        <ul>
+          <li>Download the <code>google-services.json</code> file.</li>
+          <li><span style="color: #ef4444; font-weight: bold;">CRITICAL COMMON MISTAKE:</span> Place it inside the <code>android/app/</code> directory (NOT the root project folder!).</li>
+        </ul>
+      </li>
+      <li><strong>Configure Gradle Files:</strong>
+        <p>In root <code>android/build.gradle</code> (Project level):</p>
+        <pre><code>buildscript {
+    dependencies {
+        classpath 'com.google.gms:google-services:4.4.1'
+    }
+}</code></pre>
+        <p>In <code>android/app/build.gradle</code> (App level):</p>
+        <pre><code>plugins {
+    id 'com.android.application'
+    id 'com.google.gms.google-services' // Add this at top or bottom
+}
+
+dependencies {
+    // Import the Firebase BoM
+    implementation platform('com.google.firebase:firebase-bom:33.1.0')
+    implementation 'com.google.firebase:firebase-messaging'
+}</code></pre>
+      </li>
+      <li><strong>Declare Service & Permission in <code>AndroidManifest.xml</code>:</strong>
+        <p>Add the Android 13+ permission above <code>&lt;application&gt;</code>:</p>
+        <pre><code>&lt;uses-permission android:name="android.permission.POST_NOTIFICATIONS"/&gt;</code></pre>
+        <p>Inside <code>&lt;application&gt;...&lt;/application&gt;</code>, register the messaging receiver:</p>
+        <pre><code>&lt;service
+    android:name=".MyFirebaseMessagingService"
+    android:exported="false"&gt;
+    &lt;intent-filter&gt;
+        &lt;action android:name="com.google.firebase.MESSAGING_EVENT" /&gt;
+    &lt;/intent-filter&gt;
+&lt;/service&gt;</code></pre>
+      </li>
     </ol>
+
+    <!-- Part B: iOS -->
+    <h3 style="color: #38bdf8; margin-top: 36px;">🍎 Part B: iOS Setup (Apple Developer Portal & Xcode)</h3>
+    <ol>
+      <li><strong>Enable Push in Apple Developer Portal:</strong>
+        <ul>
+          <li>Go to <a href="https://developer.apple.com/account" target="_blank" style="color: var(--primary);">developer.apple.com/account</a> > <strong>Certificates, Identifiers & Profiles</strong> > <strong>Identifiers</strong>.</li>
+          <li>Select your App ID (e.g. <code>com.yourcompany.app</code>) > scroll down to <strong>Push Notifications</strong> > check the box > click <strong>Save</strong>.</li>
+        </ul>
+      </li>
+      <li><strong>Create & Download the APNs Key (<code>.p8</code>):</strong>
+        <ul>
+          <li>In Apple Developer, go to <strong>Keys</strong> > click <strong>`+`</strong> to add a key.</li>
+          <li>Name it <code>FCM APNs Key</code>, check <strong>Apple Push Notifications service (APNs)</strong>, and click <strong>Continue</strong> > <strong>Register</strong>.</li>
+          <li>Download the <code>AuthKey_XXXXXXXXXX.p8</code> file. Save it safely (Apple only lets you download it once!).</li>
+          <li>Note down your 10-character <strong>Key ID</strong> and 10-character <strong>Team ID</strong> (top-right corner of Apple Developer).</li>
+        </ul>
+      </li>
+      <li><strong>Upload <code>.p8</code> Key to Firebase Console:</strong>
+        <ul>
+          <li>Open Firebase Console > Project settings (⚙️) > <strong>Cloud Messaging</strong> tab.</li>
+          <li>Scroll down to <strong>Apple app configuration</strong>.</li>
+          <li>Click <strong>Upload</strong> under APNs Authentication Key > select the <code>.p8</code> file > enter Key ID and Team ID > click <strong>Upload</strong>.</li>
+        </ul>
+      </li>
+      <li><strong>Add iOS App to Firebase & Get <code>GoogleService-Info.plist</code>:</strong>
+        <ul>
+          <li>In Firebase Console > Project settings > General tab > click <strong>+ Add app</strong> > select <strong>iOS</strong>.</li>
+          <li>Enter your iOS Bundle ID (must match Xcode Bundle Identifier exactly).</li>
+          <li>Download <code>GoogleService-Info.plist</code>.</li>
+          <li>Open your project in Xcode, drag <code>GoogleService-Info.plist</code> into your project navigator, and ensure <em>"Copy items if needed"</em> is checked.</li>
+        </ul>
+      </li>
+      <li><strong>Enable Capabilities in Xcode:</strong>
+        <div class="callout callout-warning">
+          <div class="callout-title">The #1 Mistake Junior iOS Developers Make</div>
+          <p>If you don't enable these two capabilities in Xcode, notifications will NEVER show up and silent pushes will NEVER wake up the app:</p>
+        </div>
+        <ul>
+          <li>Open your project in Xcode > select your Target > switch to <strong>Signing & Capabilities</strong> tab.</li>
+          <li>Click <strong>`+ Capability`</strong> > double-click <strong>Push Notifications</strong>.</li>
+          <li>Click <strong>`+ Capability`</strong> again > double-click <strong>Background Modes</strong>.</li>
+          <li>Under Background Modes, check:
+            <ul>
+              <li>☑️ <strong>Remote notifications</strong> (Required for background sync / silent push!)</li>
+              <li>☑️ <strong>Background fetch</strong></li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+    </ol>
+
+    <!-- Part C: Top 5 Pitfalls -->
+    <h3 style="color: #f59e0b; margin-top: 36px;">⚠️ The Top 5 Mistakes That Cause "Notifications Not Working":</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Mistake</th>
+          <th>Symptom</th>
+          <th>How to Fix</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1. Testing iOS on a Simulator without Push support</strong></td>
+          <td><code>getToken()</code> fails or returns invalid token.</td>
+          <td>Always test on a <strong>real physical iPhone</strong> or ensure Xcode 14+ with APNs Simulator environment is configured.</td>
+        </tr>
+        <tr>
+          <td><strong>2. Forgot Xcode Background Modes</strong></td>
+          <td>Alert notifications work, but silent background pushes (data sync) never execute.</td>
+          <td>In Xcode > Signing & Capabilities > Background Modes > check <strong>Remote notifications</strong>.</td>
+        </tr>
+        <tr>
+          <td><strong>3. Android 13 Missing Permission</strong></td>
+          <td>Notifications deliver to device but Android silently drops them.</td>
+          <td>Add <code>POST_NOTIFICATIONS</code> permission and call <code>ActivityCompat.requestPermissions</code> at runtime.</td>
+        </tr>
+        <tr>
+          <td><strong>4. Mobile App Never Registers Token with Backend</strong></td>
+          <td>Backend returns <code>"DevicesCount: 0"</code>.</td>
+          <td>When mobile app acquires FCM token, it MUST call <code>POST /api/devices/register</code> with its <code>userId</code> and <code>appId</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>5. <code>google-services.json</code> in Wrong Folder</strong></td>
+          <td>Android build fails with <em>"File google-services.json is missing"</em>.</td>
+          <td>Move it from the project root into <code>android/app/google-services.json</code>.</td>
+        </tr>
+      </tbody>
+    </table>
 
     <hr style="border: 0; border-top: 1px solid var(--surface-border); margin: 40px 0;">
 
